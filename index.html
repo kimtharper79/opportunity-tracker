@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Opportunity Tracker — Harper Collab Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            "olive":      "#6B7C3C",
+            "gold":       "#B8860B",
+            "rust":       "#8B4513",
+            "near-black": "#2C2C2C",
+            "cream":      "#F5F0E8",
+          },
+          ringColor: {
+            "gold": "#B8860B",
+          }
+        }
+      }
+    }
+  </script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- lucide-react via CDN shim -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; background: #F5F0E8; }
+    .text-cream { color: #F5F0E8; }
+    .bg-cream   { background-color: #F5F0E8; }
+    .text-near-black { color: #2C2C2C; }
+    .bg-olive   { background-color: #6B7C3C; }
+    .text-olive { color: #6B7C3C; }
+    .border-olive { border-color: #6B7C3C; }
+    .ring-gold  { --tw-ring-color: #B8860B; }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #F5F0E8; }
+    ::-webkit-scrollbar-thumb { background: #d0c9be; border-radius: 3px; }
+    /* Smooth transitions */
+    button { transition: background-color 0.15s, opacity 0.15s; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-type="module">
+    const { useState, useEffect, useMemo } = React;
+
+    // Build lucide icon components from the UMD bundle
+    function makeIcon(name) {
+      return function Icon({ size = 16, className = "", style = {} }) {
+        const ref = React.useRef(null);
+        useEffect(() => {
+          if (ref.current && window.lucide) {
+            ref.current.innerHTML = "";
+            const el = document.createElement("i");
+            el.setAttribute("data-lucide", name);
+            el.style.width  = size + "px";
+            el.style.height = size + "px";
+            el.style.display = "inline-block";
+            el.style.verticalAlign = "middle";
+            if (style.color) el.style.color = style.color;
+            ref.current.appendChild(el);
+            window.lucide.createIcons({ nodes: [el] });
+            const svg = el.querySelector("svg");
+            if (svg) {
+              svg.style.width  = size + "px";
+              svg.style.height = size + "px";
+              if (style.color) svg.style.color = style.color;
+            }
+          }
+        }, [name, size, style.color]);
+        return <span ref={ref} className={className} style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", ...style }} />;
+      };
+    }
+
+    const Plus       = makeIcon("plus");
+    const Search     = makeIcon("search");
+    const Filter     = makeIcon("filter");
+    const Download   = makeIcon("download");
+    const ChevronDown = makeIcon("chevron-down");
+    const ChevronUp  = makeIcon("chevron-up");
+    const ExternalLink = makeIcon("external-link");
+    const Edit2      = makeIcon("edit-2");
+    const Trash2     = makeIcon("trash-2");
+    const X          = makeIcon("x");
+    const Calendar   = makeIcon("calendar");
+    const Award      = makeIcon("award");
+    const BookOpen   = makeIcon("book-open");
+    const Layers     = makeIcon("layers");
+    const Tag        = makeIcon("tag");
+    const BarChart2  = makeIcon("bar-chart-2");
+    const Clock      = makeIcon("clock");
+    const AlertCircle = makeIcon("alert-circle");
+
+    // ─── Constants ──────────────────────────────────────────────────────────
+
+    const COLORS = {
+      olive:    "#6B7C3C",
+      gold:     "#B8860B",
+      rust:     "#8B4513",
+      nearBlack:"#2C2C2C",
+      cream:    "#F5F0E8",
+    };
+
+    const TYPES        = ["residency", "grant", "contest", "fellowship", "award"];
+    const STATUSES     = ["Not Started","In Progress","Submitted","Awarded","Declined","Monitor","Long Game"];
+    const IDENTITY_TAGS= ["Veteran","Women","LGBTQ+","Emerging","Student","Open"];
+    const BODIES_OF_WORK=["Thresholds","Where the Water Holds You","Political Coverage","USPSA","Open"];
+    const TIERS        = ["Tier 1","Tier 2","Tier 3","Monthly","Long Game"];
+
+    const TIER_STYLES = {
+      "Tier 1":  { bg:"#8B4513", label:"T1" },
+      "Tier 2":  { bg:"#1e3a5f", label:"T2" },
+      "Tier 3":  { bg:"#6B7C3C", label:"T3" },
+      "Monthly": { bg:"#64748b", label:"Mo" },
+      "Long Game":{ bg:"#6b7280", label:"LG" },
+    };
+
+    const SAMPLE_OPPORTUNITIES = [
+      // ── RESIDENCIES & FELLOWSHIPS ──────────────────────────────────────────
+      {
+        id:"r01", name:"Kala Art Institute — Veterans AIR",
+        type:"residency", deadline:"2026-03-01", entryFee:"$0",
+        prize:"$1,000 award + housing + studio", status:"In Progress",
+        identityTags:["Veteran","Emerging"], bodyOfWork:"Thresholds",
+        url:"https://www.kala.org",
+        notes:"APPLY NOW — deadline March 1. Veterans AIR track. SCAD enrollment may affect Fellowship eligibility. Statement of interest COMPLETE, project description COMPLETE, vet statement COMPLETE. Still need: work samples, CV, references.",
+        tier:"Tier 1",
+      },
+      {
+        id:"r02", name:"VCCA Mid-Life Fellowship",
+        type:"fellowship", deadline:"2026-05-15", entryFee:"$0",
+        prize:"Fully funded + $400 stipend", status:"Not Started",
+        identityTags:["Women","Emerging"], bodyOfWork:"Thresholds",
+        url:"https://www.vcca.com/apply/fully-funded-fellowships/",
+        notes:"Female-identifying visual artists emerging in mid-life with detoured creative path — you on paper. 2-week residency in Amherst, VA. Peer review process. Single application also covers LGBTQ+ track — check both boxes.",
+        tier:"Tier 1",
+      },
+      {
+        id:"r03", name:"VCCA LGBTQ+ Fellowship",
+        type:"fellowship", deadline:"2026-05-15", entryFee:"$0",
+        prize:"Fully funded residency", status:"Not Started",
+        identityTags:["LGBTQ+","Emerging"], bodyOfWork:"Open",
+        url:"https://www.vcca.com/apply/fully-funded-fellowships/",
+        notes:"Writers and visual artists identifying as LGBTQ+. Same application cycle as Mid-Life fellowship — apply for both simultaneously.",
+        tier:"Tier 1",
+      },
+      {
+        id:"r04", name:"Fine Arts Work Center Provincetown",
+        type:"fellowship", deadline:"2027-02-09", entryFee:"$0",
+        prize:"Fully funded 7-month fellowship", status:"Monitor",
+        identityTags:["Emerging"], bodyOfWork:"Thresholds",
+        url:"https://fawc.org",
+        notes:"10 visual arts fellows per year. Private studio + apartment October–April. Photography eligible. Target 2027 cycle. Begin building application materials now.",
+        tier:"Tier 1",
+      },
+      {
+        id:"r05", name:"MacDowell Fellowship",
+        type:"fellowship", deadline:"2026-09-10", entryFee:"$0",
+        prize:"Fully funded + need-based stipends available", status:"Monitor",
+        identityTags:["Emerging","Student"], bodyOfWork:"Thresholds",
+        url:"https://www.macdowell.org/apply/apply-for-fellowship",
+        notes:"Prestigious — 300 fellowships/year. Photography eligible. Students eligible. Need-based aid available. Opens Aug 15, 2026. Apply Sept 10 for Spring/Summer 2027 residency.",
+        tier:"Tier 1",
+      },
+      {
+        id:"r06", name:"Light Work",
+        type:"residency", deadline:"monitor", entryFee:"$0",
+        prize:"$5,000 stipend + 1-month residency", status:"Monitor",
+        identityTags:["Emerging","Open"], bodyOfWork:"Thresholds",
+        url:"https://lightwork.org",
+        notes:"Photography-specific residency in Syracuse, NY. Strong fit for Thresholds series. Confirm current cycle deadline — check monthly.",
+        tier:"Tier 1",
+      },
+      {
+        id:"r07", name:"Montage Palmetto Bluff — Artist Residency",
+        type:"residency", deadline:"rolling", entryFee:"$0",
+        prize:"Hotel residency (TBD)",status:"In Progress",
+        identityTags:["Open"], bodyOfWork:"Open",
+        url:"",
+        notes:"287-word Why response COMPLETE. Process response COMPLETE. Local proximity to SCAD is an advantage. Need: work samples, CV.",
+        tier:"Tier 2",
+      },
+      {
+        id:"r08", name:"SPAO Photographic Arts — Ottawa",
+        type:"residency", deadline:"2026-03-31", entryFee:"$5,500",
+        prize:"6-month photography mentorship residency", status:"Not Started",
+        identityTags:["Emerging","Student"], bodyOfWork:"Thresholds",
+        url:"https://spao.ca",
+        notes:"Apply before end of March for July 2026 cycle. Fee-based but includes structured mentorship. Photography-specific.",
+        tier:"Tier 2",
+      },
+      {
+        id:"r09", name:"VCCA General Residency",
+        type:"residency", deadline:"2026-05-15", entryFee:"$105–240/day (aid available)",
+        prize:"Studio residency, financial aid available", status:"Not Started",
+        identityTags:["Student","Emerging"], bodyOfWork:"Open",
+        url:"https://www.vcca.com/apply/",
+        notes:"Photography eligible. Students in degree programs eligible. Three cycles/year: Jan 15, May 15, Sept 15. Apply alongside fellowships — same campus.",
+        tier:"Tier 2",
+      },
+      {
+        id:"r10", name:"Davidoff Art Initiative",
+        type:"residency", deadline:"monitor", entryFee:"$0",
+        prize:"Fully funded — housing, stipend, travel, materials", status:"Monitor",
+        identityTags:["Open"], bodyOfWork:"Open",
+        url:"https://transartists.org",
+        notes:"10-week fully funded residency in Santo Domingo, DR. Highly competitive. Check transartists.org monthly for 2026 cycle announcement.",
+        tier:"Tier 2",
+      },
+      {
+        id:"r11", name:"Djerassi Resident Artists Program",
+        type:"residency", deadline:"2026-09-01", entryFee:"$0",
+        prize:"Fully funded 1-month residency", status:"Monitor",
+        identityTags:["Open"], bodyOfWork:"Where the Water Holds You",
+        url:"https://djerassi.org",
+        notes:"583-acre ranch in Santa Cruz Mountains. 2026 cycle closed — watch for 2027 opening in September 2026. Historically opens September.",
+        tier:"Tier 2",
+      },
+      {
+        id:"r12", name:"Chulitna Lodge — Alaska",
+        type:"residency", deadline:"2026-11-30", entryFee:"$0",
+        prize:"Fellowships available (TBD)", status:"Monitor",
+        identityTags:["Open"], bodyOfWork:"Where the Water Holds You",
+        url:"",
+        notes:"Fly-in only wilderness residency at Lake Clark, AK. 2027 cycle opens July 2026. Check July 1.",
+        tier:"Tier 3",
+      },
+      {
+        id:"r13", name:"Vashon Artist Residency",
+        type:"residency", deadline:"2026-07-01", entryFee:"$0–2,175/month sliding scale",
+        prize:"Studio residency on Salish Sea", status:"Monitor",
+        identityTags:["Open"], bodyOfWork:"Where the Water Holds You",
+        url:"",
+        notes:"Beach access on Vashon Island, WA. 4 artists per session. Applications open July 2026. Sliding scale fee.",
+        tier:"Tier 3",
+      },
+      {
+        id:"r14", name:"Chalk Hill — Sonoma County",
+        type:"residency", deadline:"2026-07-01", entryFee:"$500/week (scholarships avail.)",
+        prize:"Studio in oak woodland + vineyards", status:"Monitor",
+        identityTags:["Open"], bodyOfWork:"Where the Water Holds You",
+        url:"",
+        notes:"Oak woodland and vineyard setting. Scholarships available. Applications open July 2026.",
+        tier:"Tier 3",
+      },
+      {
+        id:"r15", name:"KIAC Klondike Institute — Dawson City",
+        type:"residency", deadline:"monitor", entryFee:"$0",
+        prize:"Free lodging + studio", status:"Monitor",
+        identityTags:["Open"], bodyOfWork:"Where the Water Holds You",
+        url:"",
+        notes:"Historic 1901 house in Dawson City, YK. Missed Jan 2026 deadline. Watch for fall 2026 cycle announcement.",
+        tier:"Tier 3",
+      },
+      {
+        id:"r16", name:"Nacán Art Residency — El Valle, DR",
+        type:"residency", deadline:"rolling", entryFee:"$420+/week",
+        prize:"Jungle/beach studio residency", status:"Not Started",
+        identityTags:["Open"], bodyOfWork:"Where the Water Holds You",
+        url:"",
+        notes:"Email application to nacanartresidency@gmail.com. Jungle/beach documentary context. Flexible schedule. Informal application process.",
+        tier:"Tier 3",
+      },
+      {
+        id:"r17", name:"Voices of the Wilderness — USDA/NPS Federal AIR",
+        type:"residency", deadline:"rolling", entryFee:"$0",
+        prize:"Housing provided (unpaid)", status:"Not Started",
+        identityTags:["Veteran","Open"], bodyOfWork:"Where the Water Holds You",
+        url:"",
+        notes:"Multiple Alaska locations. Physical/backcountry readiness required. 1-2 week placements. Contact Grace.Corrigan@usda.gov. Veteran background relevant.",
+        tier:"Tier 3",
+      },
+      {
+        id:"r18", name:"Women's Studio Workshop — Rosendale, NY",
+        type:"residency", deadline:"monitor", entryFee:"Varies",
+        prize:"Residency grants — varies by program", status:"Monitor",
+        identityTags:["Women","LGBTQ+","Emerging"], bodyOfWork:"Thresholds",
+        url:"https://wsworkshop.org",
+        notes:"Print studio residency for women, trans, nonbinary, gender fluid artists. Photography + printmaking crossover. Hudson Valley. Check annually.",
+        tier:"Tier 2",
+      },
+      // Hotel cold outreach
+      {
+        id:"r19", name:"Kimpton Shane Hotel — Cold Outreach",
+        type:"residency", deadline:"rolling", entryFee:"$0",
+        prize:"Hotel residency (TBD)", status:"In Progress",
+        identityTags:["Open"], bodyOfWork:"Open",
+        url:"",
+        notes:"Cold outreach template created. Atlanta, GA location.",
+        tier:"Monthly",
+      },
+      {
+        id:"r20", name:"Nimmo Bay — Great Bear Rainforest",
+        type:"residency", deadline:"rolling", entryFee:"$0",
+        prize:"Luxury wilderness residency (TBD)", status:"In Progress",
+        identityTags:["Open"], bodyOfWork:"Where the Water Holds You",
+        url:"",
+        notes:"Cold outreach template created. British Columbia wilderness setting.",
+        tier:"Monthly",
+      },
+      {
+        id:"r21", name:"Hotel El Ganzo — Los Cabos",
+        type:"residency", deadline:"rolling", entryFee:"$0",
+        prize:"Hotel residency (TBD)", status:"In Progress",
+        identityTags:["Open"], bodyOfWork:"Open",
+        url:"",
+        notes:"Cold outreach template created.",
+        tier:"Monthly",
+      },
+      {
+        id:"r22", name:"Teton Art Lab — Jackson Hole",
+        type:"residency", deadline:"rolling", entryFee:"$0",
+        prize:"Studio residency (TBD)", status:"In Progress",
+        identityTags:["Open"], bodyOfWork:"Where the Water Holds You",
+        url:"",
+        notes:"Cold outreach template created.",
+        tier:"Monthly",
+      },
+      {
+        id:"r23", name:"Montage Healdsburg",
+        type:"residency", deadline:"rolling", entryFee:"$0",
+        prize:"Hotel residency (TBD)", status:"In Progress",
+        identityTags:["Open"], bodyOfWork:"Open",
+        url:"",
+        notes:"Cold outreach template created.",
+        tier:"Monthly",
+      },
+      {
+        id:"r24", name:"Montage Big Sky",
+        type:"residency", deadline:"rolling", entryFee:"$0",
+        prize:"Hotel residency (TBD)", status:"In Progress",
+        identityTags:["Open"], bodyOfWork:"Open",
+        url:"",
+        notes:"Cold outreach template created.",
+        tier:"Monthly",
+      },
+      // ── GRANTS ────────────────────────────────────────────────────────────
+      {
+        id:"g01", name:"Puffin Foundation Grant",
+        type:"grant", deadline:"2026-05-15", entryFee:"$0",
+        prize:"$5,000", status:"Not Started",
+        identityTags:["Women","LGBTQ+","Emerging"], bodyOfWork:"Thresholds",
+        url:"",
+        notes:"Open to women, nonbinary, and transgender photographers. Documentary/social relevance focus. Applications open April 1.",
+        tier:"Tier 1",
+      },
+      {
+        id:"g02", name:"Firecracker Photographic Grant",
+        type:"grant", deadline:"monitor", entryFee:"Check site",
+        prize:"Cash + £1,000 print credit", status:"Monitor",
+        identityTags:["Women"], bodyOfWork:"Thresholds",
+        url:"https://lenscratch.com/resources/grants/",
+        notes:"Annual grant for female photographer completing documentary project. Strong fit for Thresholds. Check spring annually. Also listed as a contest — dual-purpose opportunity.",
+        tier:"Tier 1",
+      },
+      {
+        id:"g03", name:"Aaron Siskind Foundation Fellowship",
+        type:"fellowship", deadline:"monitor", entryFee:"$0",
+        prize:"Up to $10,000", status:"Monitor",
+        identityTags:["Emerging","Open"], bodyOfWork:"Thresholds",
+        url:"https://aaronsiskind.org",
+        notes:"Photography and photo-based art. Professional commitment and artistic excellence. Watch for Jan 2027 cycle announcement.",
+        tier:"Tier 1",
+      },
+      {
+        id:"g04", name:"W. Eugene Smith Memorial Fund",
+        type:"grant", deadline:"monitor", entryFee:"$0",
+        prize:"$30,000 grant + $5,000 fellowship", status:"Monitor",
+        identityTags:["Open"], bodyOfWork:"Thresholds",
+        url:"https://smithfund.org",
+        notes:"Documentary/photojournalistic work of depth and compassion. Major reach grant. Watch Oct 2026 deadline. Build toward this.",
+        tier:"Tier 1",
+      },
+      {
+        id:"g05", name:"Aftermath Project Grant",
+        type:"grant", deadline:"monitor", entryFee:"$0",
+        prize:"$20,000", status:"Monitor",
+        identityTags:["Veteran","Open"], bodyOfWork:"Thresholds",
+        url:"https://aftermathproject.org",
+        notes:"Explores aftermath of conflict. Military background + documentary practice directly relevant. Check annually.",
+        tier:"Tier 2",
+      },
+      {
+        id:"g06", name:"Alexia Foundation Grant",
+        type:"grant", deadline:"monitor", entryFee:"$0",
+        prize:"$20,000", status:"Monitor",
+        identityTags:["Student","Emerging","Open"], bodyOfWork:"Where the Water Holds You",
+        url:"https://alexiafoundation.org",
+        notes:"Photographers producing social change stories. Student and professional tracks. Strong fit for Where the Water Holds You. Check annually.",
+        tier:"Tier 2",
+      },
+      {
+        id:"g07", name:"Vital Impacts Environmental Grant",
+        type:"grant", deadline:"monitor", entryFee:"$0",
+        prize:"$5,000 emerging / $20,000 established", status:"Monitor",
+        identityTags:["Emerging","Open"], bodyOfWork:"Where the Water Holds You",
+        url:"",
+        notes:"Documentary projects on environmental stories. Emerging photographer track available. Watch Sept 2026.",
+        tier:"Tier 2",
+      },
+      {
+        id:"g08", name:"USVAA Network",
+        type:"fellowship", deadline:"rolling", entryFee:"$0",
+        prize:"Fellowship connections + network", status:"Monitor",
+        identityTags:["Veteran"], bodyOfWork:"Open",
+        url:"https://usvaa.org",
+        notes:"Connects veteran artists to fellowships and opportunities. Screenwriting + visual art crossover. Rolling access.",
+        tier:"Tier 3",
+      },
+      // ── CONTESTS & AWARDS ─────────────────────────────────────────────────
+      {
+        id:"c01", name:"All About Photo Awards — Women",
+        type:"contest", deadline:"2026-03-03", entryFee:"~$30–35",
+        prize:"$1,000 + AAP Magazine publication", status:"Not Started",
+        identityTags:["Women","Emerging"], bodyOfWork:"Thresholds",
+        url:"https://www.all-about-photo.com/photo-contests.php",
+        notes:"SUBMIT NOW — 7 days left. Direct identity fit. Documentary + portrait eligible. Submit Thresholds or Where the Water Holds You series.",
+        tier:"Tier 1",
+      },
+      {
+        id:"c02", name:"PhMuseum Photography Grant",
+        type:"contest", deadline:"monitor", entryFee:"~$30",
+        prize:"$10,000 emerging grant", status:"Monitor",
+        identityTags:["Emerging","Open"], bodyOfWork:"Thresholds",
+        url:"https://phmuseum.com/grants",
+        notes:"Documentary photography focus. Thresholds or Where the Water Holds You belong here. Portfolio + project statement required. Watch spring annually.",
+        tier:"Tier 1",
+      },
+      {
+        id:"c03", name:"LensCulture Portrait Awards",
+        type:"contest", deadline:"monitor", entryFee:"~$55/series",
+        prize:"NYC exhibition + major career opportunities", status:"Monitor",
+        identityTags:["Open"], bodyOfWork:"Thresholds",
+        url:"https://www.lensculture.com/competitions",
+        notes:"13th annual. Jury includes major photo editors. Environmental portraiture + documentary approach = strong fit. Finalist status carries real CV weight. Watch spring 2026.",
+        tier:"Tier 1",
+      },
+      {
+        id:"c04", name:"Belfast Photo Festival Open Submission",
+        type:"contest", deadline:"monitor", entryFee:"£22 early bird",
+        prize:"The Guardian, TIME Lightbox, BJP exposure", status:"Monitor",
+        identityTags:["Open"], bodyOfWork:"Thresholds",
+        url:"https://belfastphotofestival.com",
+        notes:"Open theme. Finalists featured in The Guardian, TIME Lightbox, British Journal of Photography. Submit as a body of work. Watch spring 2026.",
+        tier:"Tier 1",
+      },
+      {
+        id:"c05", name:"Photo Contest Calendar — People Open Call",
+        type:"contest", deadline:"2026-03-15", entryFee:"Check site",
+        prize:"Global online exhibition", status:"Not Started",
+        identityTags:["Open"], bodyOfWork:"Thresholds",
+        url:"https://www.photocontestcalendar.com/people-open-call-2026/",
+        notes:"Open theme embracing portraiture, documentary, street, photojournalism. Human presence and gesture. Submit environmental portraits or Thresholds images. 19 days.",
+        tier:"Tier 1",
+      },
+      {
+        id:"c06", name:"Visual Story Award (Independent Photographer)",
+        type:"contest", deadline:"rolling", entryFee:"~$15–25",
+        prize:"$2,000 cash", status:"Monitor",
+        identityTags:["Open"], bodyOfWork:"Open",
+        url:"https://www.independentphotographer.com",
+        notes:"Monthly themes rotate. Low barrier, good return. Submit consistently — one strong image or tight series each cycle.",
+        tier:"Monthly",
+      },
+      {
+        id:"c07", name:"The Independent Photographer — Monthly",
+        type:"contest", deadline:"rolling", entryFee:"~$15",
+        prize:"$2,000 cash per cycle", status:"In Progress",
+        identityTags:["Open"], bodyOfWork:"Open",
+        url:"https://www.independentphotographer.com",
+        notes:"Keep a folder of 3–5 single images ready to submit each month. Rotate between portrait, documentary, and street depending on theme. Low cost, consistent visibility.",
+        tier:"Monthly",
+      },
+      {
+        id:"c08", name:"Lenscratch Open Calls",
+        type:"contest", deadline:"rolling", entryFee:"Varies (often free–low)",
+        prize:"Feature + photo editor visibility", status:"In Progress",
+        identityTags:["Open"], bodyOfWork:"Open",
+        url:"https://lenscratch.com/resources/",
+        notes:"Not always cash but massive credibility in documentary world. Photo editors and curators follow Lenscratch closely. Monitor weekly and submit regularly.",
+        tier:"Monthly",
+      },
+      {
+        id:"c09", name:"IPA — International Photography Awards",
+        type:"award", deadline:"monitor", entryFee:"Student discounted",
+        prize:"Prestige + international publication", status:"Monitor",
+        identityTags:["Student","Emerging"], bodyOfWork:"Thresholds",
+        url:"https://ipa.com",
+        notes:"Student category judged separately — lower competition, same prestige on CV. Submit under Student track while enrolled at SCAD. Watch summer 2026.",
+        tier:"Tier 2",
+      },
+      {
+        id:"c10", name:"Hasselblad Masters 2026",
+        type:"contest", deadline:"monitor", entryFee:"Free",
+        prize:"Hasselblad X2D camera + €5,000", status:"Monitor",
+        identityTags:["Open"], bodyOfWork:"Open",
+        url:"https://www.hasselblad.com/masters",
+        notes:"Free to enter. Portrait and Street are best categories. Semifinalist status alone is CV-worthy. Any camera eligible. Watch spring 2026 — vote by June 30.",
+        tier:"Tier 2",
+      },
+      {
+        id:"c11", name:"Siena International Photo Awards (SIPA)",
+        type:"contest", deadline:"monitor", entryFee:"~$30",
+        prize:"Exhibition + international exposure", status:"Monitor",
+        identityTags:["Open"], bodyOfWork:"Thresholds",
+        url:"https://www.sienaawards.com",
+        notes:"150+ countries. Documentary and People categories strong fit. High-profile exhibition in Siena. Watch summer 2026.",
+        tier:"Tier 2",
+      },
+      {
+        id:"c12", name:"Lucie Foundation — ON THE BLOCK",
+        type:"contest", deadline:"monitor", entryFee:"Check site",
+        prize:"Exhibition + fine art prints", status:"Monitor",
+        identityTags:["Open"], bodyOfWork:"USPSA",
+        url:"https://luciefoundation.org",
+        notes:"Street photography focus — fleeting moments, everyday life. USPSA coverage and event documentation relevant. Same org as Emerging Artist Scholarship.",
+        tier:"Tier 2",
+      },
+      {
+        id:"c13", name:"World Press Photo Contest",
+        type:"contest", deadline:"monitor", entryFee:"Free",
+        prize:"€11,000 + global exhibition + yearbook", status:"Monitor",
+        identityTags:["Open"], bodyOfWork:"Political Coverage",
+        url:"https://www.worldpressphoto.org/contest",
+        notes:"Free to enter. Requires proof of professional status. Blue Star Gala / Clyburn coverage + political event documentation supports eligibility. Enter Singles and Stories categories. Long game — build toward 2027.",
+        tier:"Long Game",
+      },
+      {
+        id:"c14", name:"Aperture Portfolio Prize",
+        type:"contest", deadline:"monitor", entryFee:"Requires Aperture subscription",
+        prize:"Published in Aperture magazine", status:"Monitor",
+        identityTags:["Open"], bodyOfWork:"Thresholds",
+        url:"https://aperture.org",
+        notes:"First prize = published in Aperture. Build toward this once Thresholds body of work is more fully developed. Target 2027 cycle.",
+        tier:"Long Game",
+      },
+      {
+        id:"c15", name:"Prix Virginia",
+        type:"award", deadline:"monitor", entryFee:"Check site",
+        prize:"$2,000 professional prize", status:"Monitor",
+        identityTags:["Women"], bodyOfWork:"Thresholds",
+        url:"https://prixvirginia.org",
+        notes:"Biennial award for women photographers regardless of nationality or age. Documentary eligible. Next cycle 2027 — mark calendar.",
+        tier:"Long Game",
+      },
+      // ── IDENTITY-BASED ─────────────────────────────────────────────────────
+      {
+        id:"i01", name:"VCCA NEA Veteran Fellowship",
+        type:"fellowship", deadline:"monitor", entryFee:"$0",
+        prize:"Fully funded + $1,000 stipend", status:"Monitor",
+        identityTags:["Veteran"], bodyOfWork:"Thresholds",
+        url:"https://www.vcca.com/apply/fully-funded-fellowships/",
+        notes:"Previously offered — may return. Contact vcca@vcca.com to inquire about reopening. Watch for announcement.",
+        tier:"Tier 1",
+      },
+      {
+        id:"i02", name:"Lucie Foundation — Emerging Artist Scholarship",
+        type:"award", deadline:"2026-09-01", entryFee:"$0",
+        prize:"$1,500 + Sony camera", status:"Not Started",
+        identityTags:["Emerging","Student"], bodyOfWork:"Thresholds",
+        url:"https://luciefoundation.org",
+        notes:"Students, photographers in first 5 years, or those not earning majority income from photography. Strong fit. Deadline Sept 1.",
+        tier:"Tier 2",
+      },
+      {
+        id:"i03", name:"LUCEO Student Project Award",
+        type:"award", deadline:"monitor", entryFee:"$0",
+        prize:"TBD annually", status:"Monitor",
+        identityTags:["Student","Emerging"], bodyOfWork:"Thresholds",
+        url:"https://luceoagency.com",
+        notes:"Annual award for student photographer with significant developing body of work. Check annually.",
+        tier:"Tier 2",
+      },
+    ];
+
+    const SAMPLE_LOG = [
+      {
+        id:"l1", opportunityName:"Kala Art Institute — Veterans AIR",
+        dateSubmitted:"", bodyOfWork:"Thresholds",
+        outcome:"Pending",
+        notes:"Application in progress. Deadline March 1, 2026. Statement + project description + vet statement complete. Still need work samples, CV, references.",
+      },
+      {
+        id:"l2", opportunityName:"Montage Palmetto Bluff — Artist Residency",
+        dateSubmitted:"2026-02-10", bodyOfWork:"Open",
+        outcome:"Pending",
+        notes:"Application drafted. 287-word Why response and Process response complete. Local proximity advantage noted.",
+      },
+      {
+        id:"l3", opportunityName:"Kimpton Shane Hotel — Cold Outreach",
+        dateSubmitted:"2026-02-15", bodyOfWork:"Open",
+        outcome:"Pending",
+        notes:"Cold outreach email sent. Awaiting response.",
+      },
+    ];
+
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+
+    function daysUntil(deadline) {
+      if (!deadline || deadline === "rolling" || deadline === "monitor") return null;
+      const today = new Date(); today.setHours(0,0,0,0);
+      const d = new Date(deadline + "T00:00:00");
+      return Math.ceil((d - today) / 86400000);
+    }
+
+    function deadlineColor(days) {
+      if (days === null)  return "gray";
+      if (days <= 14)     return "red";
+      if (days <= 60)     return "amber";
+      return "green";
+    }
+
+    function formatDate(s) {
+      if (!s || s === "rolling" || s === "monitor") return s;
+      return new Date(s + "T00:00:00").toLocaleDateString("en-US",{ month:"short", day:"numeric", year:"numeric" });
+    }
+
+    function exportCSV(data, filename) {
+      if (!data.length) return;
+      const keys = Object.keys(data[0]);
+      const rows = [keys.join(","), ...data.map(r =>
+        keys.map(k => `"${String(r[k]??'').replace(/"/g,'""')}"`).join(",")
+      )];
+      const blob = new Blob([rows.join("\n")], { type:"text/csv" });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function useLocalStorage(key, initial) {
+      const [value, setValue] = useState(() => {
+        try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : initial; }
+        catch { return initial; }
+      });
+      useEffect(() => {
+        try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+      }, [key, value]);
+      return [value, setValue];
+    }
+
+    function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+
+    // ─── Badges ──────────────────────────────────────────────────────────────
+
+    function TierBadge({ tier }) {
+      if (!tier) return null;
+      const s = TIER_STYLES[tier];
+      if (!s) return null;
+      return (
+        <span style={{ backgroundColor: s.bg, color: "#F5F0E8" }}
+          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold">
+          {s.label}
+        </span>
+      );
+    }
+
+    const DL_STYLE = {
+      red:   { bg:"#fef2f2", text:"#b91c1c", border:"#fca5a5" },
+      amber: { bg:"#fffbeb", text:"#b45309", border:"#fcd34d" },
+      green: { bg:"#f0fdf4", text:"#15803d", border:"#86efac" },
+      gray:  { bg:"#f9fafb", text:"#6b7280", border:"#d1d5db" },
+    };
+
+    function DeadlineBadge({ deadline }) {
+      const days  = daysUntil(deadline);
+      const color = deadlineColor(days);
+      const s     = DL_STYLE[color];
+      const label = days === null
+        ? (deadline === "rolling" ? "Rolling" : "Monitor")
+        : days < 0 ? "Past"
+        : days === 0 ? "Today"
+        : `${days}d`;
+      return (
+        <span style={{ backgroundColor:s.bg, color:s.text, borderColor:s.border }}
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-semibold">
+          <Clock size={10} />
+          {label}
+        </span>
+      );
+    }
+
+    const STATUS_CLS = {
+      "Not Started":"bg-gray-100 text-gray-600 border-gray-300",
+      "In Progress":"bg-blue-100 text-blue-700 border-blue-300",
+      "Submitted":"bg-purple-100 text-purple-700 border-purple-300",
+      "Awarded":"bg-green-100 text-green-700 border-green-300",
+      "Declined":"bg-red-100 text-red-500 border-red-300",
+      "Monitor":"bg-yellow-100 text-yellow-700 border-yellow-300",
+      "Long Game":"bg-gray-200 text-gray-600 border-gray-400",
+    };
+
+    function StatusBadge({ status }) {
+      return <span className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-medium ${STATUS_CLS[status]||""}`}>{status}</span>;
+    }
+
+    const TAG_CLS = {
+      "Veteran":"bg-green-50 text-green-800 border-green-300",
+      "Women":"bg-rose-50 text-rose-700 border-rose-300",
+      "LGBTQ+":"bg-purple-100 text-purple-700 border-purple-300",
+      "Emerging":"bg-yellow-50 text-yellow-700 border-yellow-300",
+      "Student":"bg-blue-50 text-blue-700 border-blue-300",
+      "Open":"bg-gray-100 text-gray-500 border-gray-300",
+    };
+
+    function IdentityTag({ tag }) {
+      return <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-xs ${TAG_CLS[tag]||""}`}>{tag}</span>;
+    }
+
+    // ─── Opportunity Modal ────────────────────────────────────────────────────
+
+    const EMPTY_OPP = {
+      id:"", name:"", type:"grant", deadline:"", entryFee:"", prize:"",
+      status:"Not Started", identityTags:[], bodyOfWork:"Open",
+      url:"", notes:"", tier:"Tier 2", priority:2,
+    };
+
+    function OppModal({ opp, onSave, onClose }) {
+      const [form, setForm] = useState(opp ? {...opp} : {...EMPTY_OPP, id:uid()});
+      function set(f,v){ setForm(p=>({...p,[f]:v})); }
+      function toggleTag(t){ setForm(p=>({ ...p, identityTags: p.identityTags.includes(t) ? p.identityTags.filter(x=>x!==t) : [...p.identityTags,t] })); }
+
+      const inp = "w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2";
+      const lbl = "block text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide";
+
+      return (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{backgroundColor:"rgba(0,0,0,0.5)"}}>
+          <div className="rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{backgroundColor:COLORS.cream}}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h2 className="font-bold text-lg" style={{color:COLORS.nearBlack}}>{opp ? "Edit Opportunity" : "Add Opportunity"}</h2>
+              <button onClick={onClose} className="p-1 hover:bg-gray-200 rounded"><X size={18}/></button>
+            </div>
+            <div className="p-6 grid grid-cols-1 gap-4" style={{gridTemplateColumns:"repeat(2, minmax(0,1fr))"}}>
+              <div style={{gridColumn:"span 2"}}>
+                <label className={lbl}>Name *</label>
+                <input className={inp} style={{backgroundColor:COLORS.cream}} value={form.name} onChange={e=>set("name",e.target.value)} />
+              </div>
+              <div>
+                <label className={lbl}>Type</label>
+                <select className={inp} style={{backgroundColor:COLORS.cream}} value={form.type} onChange={e=>set("type",e.target.value)}>
+                  {TYPES.map(t=><option key={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={lbl}>Deadline</label>
+                <input className={inp} style={{backgroundColor:COLORS.cream}} value={form.deadline} onChange={e=>set("deadline",e.target.value)} placeholder="YYYY-MM-DD or rolling" />
+              </div>
+              <div>
+                <label className={lbl}>Entry Fee</label>
+                <input className={inp} style={{backgroundColor:COLORS.cream}} value={form.entryFee} onChange={e=>set("entryFee",e.target.value)} placeholder="$0" />
+              </div>
+              <div>
+                <label className={lbl}>Prize / Benefit</label>
+                <input className={inp} style={{backgroundColor:COLORS.cream}} value={form.prize} onChange={e=>set("prize",e.target.value)} />
+              </div>
+              <div>
+                <label className={lbl}>Status</label>
+                <select className={inp} style={{backgroundColor:COLORS.cream}} value={form.status} onChange={e=>set("status",e.target.value)}>
+                  {STATUSES.map(s=><option key={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={lbl}>Tier</label>
+                <select className={inp} style={{backgroundColor:COLORS.cream}} value={form.tier} onChange={e=>set("tier",e.target.value)}>
+                  {TIERS.map(t=><option key={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={lbl}>Body of Work</label>
+                <select className={inp} style={{backgroundColor:COLORS.cream}} value={form.bodyOfWork} onChange={e=>set("bodyOfWork",e.target.value)}>
+                  {BODIES_OF_WORK.map(b=><option key={b}>{b}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={lbl}>URL</label>
+                <input className={inp} style={{backgroundColor:COLORS.cream}} value={form.url} onChange={e=>set("url",e.target.value)} placeholder="https://" />
+              </div>
+              <div style={{gridColumn:"span 2"}}>
+                <label className={lbl}>Identity Tags</label>
+                <div className="flex flex-wrap gap-2">
+                  {IDENTITY_TAGS.map(tag=>(
+                    <button key={tag} type="button" onClick={()=>toggleTag(tag)}
+                      className="px-3 py-1 rounded-full border text-xs font-medium transition-colors"
+                      style={{ borderColor: form.identityTags.includes(tag) ? COLORS.gold : "#d1d5db",
+                               backgroundColor: form.identityTags.includes(tag) ? "#fdf4d0" : "transparent",
+                               color: form.identityTags.includes(tag) ? COLORS.nearBlack : "#6b7280" }}>
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{gridColumn:"span 2"}}>
+                <label className={lbl}>Notes / Strategy</label>
+                <textarea className={inp+" resize-none"} style={{backgroundColor:COLORS.cream}} rows={3} value={form.notes} onChange={e=>set("notes",e.target.value)} />
+              </div>
+              <div style={{gridColumn:"span 2", display:"flex", justifyContent:"flex-end", gap:"0.75rem", paddingTop:"0.5rem"}}>
+                <button onClick={onClose} className="px-4 py-2 rounded border border-gray-300 text-sm hover:bg-gray-100">Cancel</button>
+                <button onClick={()=>{ if(form.name.trim()) onSave(form); }}
+                  className="px-5 py-2 rounded text-sm font-semibold"
+                  style={{backgroundColor:COLORS.rust, color:COLORS.cream}}>
+                  {opp ? "Save Changes" : "Add Opportunity"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Log Modal ────────────────────────────────────────────────────────────
+
+    function LogModal({ entry, onSave, onClose }) {
+      const [form, setForm] = useState(entry ? {...entry} : { id:uid(), opportunityName:"", dateSubmitted:"", bodyOfWork:"Open", outcome:"Pending", notes:"" });
+      function set(f,v){ setForm(p=>({...p,[f]:v})); }
+      const inp = "w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none";
+      const lbl = "block text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide";
+
+      return (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{backgroundColor:"rgba(0,0,0,0.5)"}}>
+          <div className="rounded-xl shadow-2xl w-full max-w-lg" style={{backgroundColor:COLORS.cream}}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h2 className="font-bold text-lg" style={{color:COLORS.nearBlack}}>{entry ? "Edit Log Entry" : "Log Submission"}</h2>
+              <button onClick={onClose} className="p-1 hover:bg-gray-200 rounded"><X size={18}/></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className={lbl}>Opportunity Name</label>
+                <input className={inp} style={{backgroundColor:COLORS.cream}} value={form.opportunityName} onChange={e=>set("opportunityName",e.target.value)} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={lbl}>Date Submitted</label>
+                  <input type="date" className={inp} style={{backgroundColor:COLORS.cream}} value={form.dateSubmitted} onChange={e=>set("dateSubmitted",e.target.value)} />
+                </div>
+                <div>
+                  <label className={lbl}>Body of Work</label>
+                  <select className={inp} style={{backgroundColor:COLORS.cream}} value={form.bodyOfWork} onChange={e=>set("bodyOfWork",e.target.value)}>
+                    {BODIES_OF_WORK.map(b=><option key={b}>{b}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className={lbl}>Outcome</label>
+                <select className={inp} style={{backgroundColor:COLORS.cream}} value={form.outcome} onChange={e=>set("outcome",e.target.value)}>
+                  {["Pending","Awarded","Shortlisted","Not Selected","Declined"].map(o=><option key={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={lbl}>Notes</label>
+                <textarea className={inp+" resize-none"} style={{backgroundColor:COLORS.cream}} rows={3} value={form.notes} onChange={e=>set("notes",e.target.value)} />
+              </div>
+              <div className="flex justify-end gap-3 pt-1">
+                <button onClick={onClose} className="px-4 py-2 rounded border border-gray-300 text-sm hover:bg-gray-100">Cancel</button>
+                <button onClick={()=>{ if(form.opportunityName) onSave(form); }}
+                  className="px-5 py-2 rounded text-sm font-semibold"
+                  style={{backgroundColor:COLORS.rust, color:COLORS.cream}}>
+                  {entry ? "Save" : "Log It"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Opportunity Card ─────────────────────────────────────────────────────
+
+    function OppCard({ opp, onEdit, onDelete }) {
+      const [expanded, setExpanded] = useState(false);
+
+      return (
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm" style={{transition:"box-shadow 0.2s"}}>
+          <div className="flex items-start gap-3 p-4 cursor-pointer select-none" onClick={()=>setExpanded(e=>!e)}>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center flex-wrap gap-2 mb-1">
+                <TierBadge tier={opp.tier} />
+                <span className="text-xs text-gray-400 uppercase tracking-wide font-medium">{opp.type}</span>
+                <StatusBadge status={opp.status} />
+              </div>
+              <h3 className="font-semibold text-sm leading-snug" style={{color:COLORS.nearBlack, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{opp.name}</h3>
+              <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                <DeadlineBadge deadline={opp.deadline} />
+                {opp.deadline && opp.deadline !== "rolling" && opp.deadline !== "monitor" && (
+                  <span className="text-xs text-gray-400">{formatDate(opp.deadline)}</span>
+                )}
+                {opp.prize && (
+                  <span className="text-xs text-gray-500" style={{maxWidth:"160px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+                    <Award size={10} /> {opp.prize}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <button onClick={e=>{e.stopPropagation();onEdit(opp);}} className="p-1.5 rounded hover:bg-gray-100 text-gray-400"><Edit2 size={14}/></button>
+              <button onClick={e=>{e.stopPropagation();onDelete(opp.id);}} className="p-1.5 rounded hover:bg-red-50 text-gray-400"><Trash2 size={14}/></button>
+              {expanded ? <ChevronUp size={16} className="text-gray-400"/> : <ChevronDown size={16} className="text-gray-400"/>}
+            </div>
+          </div>
+
+          {expanded && (
+            <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">
+              <div className="grid gap-3 text-xs" style={{gridTemplateColumns:"repeat(4, minmax(0,1fr))"}}>
+                {[
+                  ["Entry Fee", opp.entryFee || "—"],
+                  ["Body of Work", opp.bodyOfWork],
+                  ["Deadline", opp.deadline === "rolling" || opp.deadline === "monitor"
+                    ? opp.deadline.charAt(0).toUpperCase() + opp.deadline.slice(1)
+                    : formatDate(opp.deadline)],
+                  ["Tier", opp.tier],
+                ].map(([k,v])=>(
+                  <div key={k}>
+                    <span className="text-gray-400 uppercase tracking-wide font-medium block">{k}</span>
+                    <span className="font-medium" style={{color:COLORS.nearBlack}}>{v}</span>
+                  </div>
+                ))}
+              </div>
+
+              {opp.identityTags?.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {opp.identityTags.map(t=><IdentityTag key={t} tag={t}/>)}
+                </div>
+              )}
+
+              {opp.notes && (
+                <div className="rounded p-3 border border-yellow-200" style={{backgroundColor:COLORS.cream}}>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    <strong style={{color:COLORS.nearBlack}}>Strategy: </strong>{opp.notes}
+                  </p>
+                </div>
+              )}
+
+              {opp.url && (
+                <a href={opp.url} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-medium hover:underline"
+                  style={{color:COLORS.rust}}
+                  onClick={e=>e.stopPropagation()}>
+                  <ExternalLink size={12}/> Visit Opportunity
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ─── Dashboard Home ───────────────────────────────────────────────────────
+
+    function DashboardHome({ opportunities }) {
+      const total  = opportunities.length;
+      const due14  = opportunities.filter(o=>{const d=daysUntil(o.deadline);return d!==null&&d>=0&&d<=14;}).length;
+      const due60  = opportunities.filter(o=>{const d=daysUntil(o.deadline);return d!==null&&d>14&&d<=60;}).length;
+      const active = opportunities.filter(o=>o.status==="In Progress").length;
+
+      const upcoming = [...opportunities]
+        .filter(o=>{const d=daysUntil(o.deadline);return d!==null&&d>=0;})
+        .sort((a,b)=>daysUntil(a.deadline)-daysUntil(b.deadline))
+        .slice(0,5);
+
+      const cards = [
+        { label:"Total Tracked",  value:total,  icon:Layers,      color:COLORS.olive },
+        { label:"Due ≤ 14 days",  value:due14,  icon:AlertCircle, color:"#DC2626" },
+        { label:"Due ≤ 60 days",  value:due60,  icon:Calendar,    color:COLORS.gold },
+        { label:"In Progress",    value:active, icon:BarChart2,   color:"#3B82F6" },
+      ];
+
+      const byType = TYPES.reduce((acc,t)=>{ acc[t]=opportunities.filter(o=>o.type===t).length; return acc; },{});
+
+      return (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-xl font-bold mb-1" style={{color:COLORS.nearBlack}}>Dashboard</h2>
+            <p className="text-sm text-gray-500">Harper Collab Studio · Opportunity Overview</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4" style={{gridTemplateColumns:"repeat(4, minmax(0,1fr))"}}>
+            {cards.map(c=>(
+              <div key={c.label} className="rounded-xl border bg-white p-4 border-gray-200">
+                <c.icon size={20} style={{color:c.color}} />
+                <div className="text-2xl font-bold mt-2" style={{color:COLORS.nearBlack}}>{c.value}</div>
+                <div className="text-xs text-gray-500 font-medium mt-0.5">{c.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 gap-6" style={{gridTemplateColumns:"1fr 1fr"}}>
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wide mb-3 flex items-center gap-2" style={{color:COLORS.nearBlack}}>
+                <Clock size={14} style={{color:COLORS.rust}}/> Coming Up
+              </h3>
+              <div className="space-y-2">
+                {upcoming.length === 0 ? (
+                  <p className="text-sm text-gray-400">No dated deadlines tracked.</p>
+                ) : upcoming.map(o=>(
+                  <div key={o.id} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200">
+                    <DeadlineBadge deadline={o.deadline}/>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium" style={{color:COLORS.nearBlack, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{o.name}</p>
+                      <p className="text-xs text-gray-400">{formatDate(o.deadline)}</p>
+                    </div>
+                    <TierBadge tier={o.tier}/>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wide mb-3 flex items-center gap-2" style={{color:COLORS.nearBlack}}>
+                <BookOpen size={14} style={{color:COLORS.olive}}/> By Type
+              </h3>
+              <div className="space-y-2">
+                {TYPES.map(t=>{
+                  const count = byType[t];
+                  const pct   = total ? Math.round((count/total)*100) : 0;
+                  return (
+                    <div key={t} className="flex items-center gap-3">
+                      <span className="text-xs text-gray-500 capitalize" style={{width:"5rem"}}>{t}</span>
+                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{width:`${pct}%`, backgroundColor:COLORS.olive}}/>
+                      </div>
+                      <span className="text-xs text-gray-500" style={{width:"1.5rem", textAlign:"right"}}>{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Opportunities Tab ────────────────────────────────────────────────────
+
+    function OpportunitiesTab({ opportunities, setOpportunities, tabFilter }) {
+      const [search,      setSearch]      = useState("");
+      const [filterStatus,setFilterStatus]= useState("All");
+      const [filterTag,   setFilterTag]   = useState("All");
+      const [filterType,  setFilterType]  = useState("All");
+      const [filterBOW,   setFilterBOW]   = useState("All");
+      const [sortBy,      setSortBy]      = useState("deadline");
+      const [modalOpp,    setModalOpp]    = useState(null);
+      const [showModal,   setShowModal]   = useState(false);
+
+      const filtered = useMemo(() => {
+        let list = [...opportunities];
+        if (tabFilter) {
+          if (tabFilter === "identity") {
+            list = list.filter(o => o.identityTags?.some(t=>["Veteran","Women","LGBTQ+","Emerging"].includes(t)));
+          } else if (Array.isArray(tabFilter)) {
+            list = list.filter(o => tabFilter.includes(o.type));
+          }
+        }
+        if (search) list = list.filter(o=>o.name.toLowerCase().includes(search.toLowerCase()));
+        if (filterStatus !== "All") list = list.filter(o=>o.status===filterStatus);
+        if (filterTag    !== "All") list = list.filter(o=>o.identityTags?.includes(filterTag));
+        if (filterType   !== "All") list = list.filter(o=>o.type===filterType);
+        if (filterBOW    !== "All") list = list.filter(o=>o.bodyOfWork===filterBOW);
+
+        if (sortBy === "deadline") {
+          list.sort((a,b)=>{
+            const da=daysUntil(a.deadline), db=daysUntil(b.deadline);
+            if (da===null&&db===null) return 0;
+            if (da===null) return 1; if (db===null) return -1;
+            return da-db;
+          });
+        } else if (sortBy === "prize") {
+          list.sort((a,b)=>{
+            const pa=parseInt(a.prize?.replace(/[^0-9]/g,"")||"0");
+            const pb=parseInt(b.prize?.replace(/[^0-9]/g,"")||"0");
+            return pb-pa;
+          });
+        } else if (sortBy === "tier") {
+          const order={"Tier 1":1,"Tier 2":2,"Tier 3":3,"Monthly":4,"Long Game":5};
+          list.sort((a,b)=>(order[a.tier]||9)-(order[b.tier]||9));
+        }
+        return list;
+      }, [opportunities,search,filterStatus,filterTag,filterType,filterBOW,sortBy,tabFilter]);
+
+      function handleSave(opp) {
+        setOpportunities(prev=>{
+          const idx=prev.findIndex(o=>o.id===opp.id);
+          if(idx>=0){const n=[...prev];n[idx]=opp;return n;}
+          return [...prev,opp];
+        });
+        setShowModal(false); setModalOpp(null);
+      }
+
+      function handleDelete(id) {
+        if (window.confirm("Delete this opportunity?"))
+          setOpportunities(prev=>prev.filter(o=>o.id!==id));
+      }
+
+      const selCls = "rounded border border-gray-300 px-2 py-1.5 text-xs focus:outline-none";
+
+      return (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1" style={{minWidth:"180px"}}>
+              <Search size={14} className="absolute left-2.5 text-gray-400" style={{top:"50%",transform:"translateY(-50%)"}}/>
+              <input className="w-full rounded border border-gray-300 pl-8 pr-3 py-1.5 text-sm focus:outline-none"
+                style={{backgroundColor:COLORS.cream}}
+                placeholder="Search opportunities…" value={search} onChange={e=>setSearch(e.target.value)}/>
+            </div>
+            <select className={selCls} style={{backgroundColor:COLORS.cream}} value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
+              <option value="All">All Statuses</option>
+              {STATUSES.map(s=><option key={s}>{s}</option>)}
+            </select>
+            <select className={selCls} style={{backgroundColor:COLORS.cream}} value={filterTag} onChange={e=>setFilterTag(e.target.value)}>
+              <option value="All">All Tags</option>
+              {IDENTITY_TAGS.map(t=><option key={t}>{t}</option>)}
+            </select>
+            {!tabFilter && (
+              <select className={selCls} style={{backgroundColor:COLORS.cream}} value={filterType} onChange={e=>setFilterType(e.target.value)}>
+                <option value="All">All Types</option>
+                {TYPES.map(t=><option key={t}>{t}</option>)}
+              </select>
+            )}
+            <select className={selCls} style={{backgroundColor:COLORS.cream}} value={filterBOW} onChange={e=>setFilterBOW(e.target.value)}>
+              <option value="All">All Series</option>
+              {BODIES_OF_WORK.map(b=><option key={b}>{b}</option>)}
+            </select>
+            <select className={selCls} style={{backgroundColor:COLORS.cream}} value={sortBy} onChange={e=>setSortBy(e.target.value)}>
+              <option value="deadline">Sort: Deadline</option>
+              <option value="prize">Sort: Prize</option>
+              <option value="tier">Sort: Tier</option>
+            </select>
+            <button onClick={()=>exportCSV(filtered,"opportunities.csv")}
+              className="flex items-center gap-1 px-3 py-1.5 rounded border border-gray-300 text-xs hover:bg-gray-100 font-medium">
+              <Download size={13}/> CSV
+            </button>
+            <button onClick={()=>{setModalOpp(null);setShowModal(true);}}
+              className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-semibold"
+              style={{backgroundColor:COLORS.rust, color:COLORS.cream}}>
+              <Plus size={13}/> Add
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-400">{filtered.length} record{filtered.length!==1?"s":""}</p>
+
+          <div className="space-y-2">
+            {filtered.length === 0 ? (
+              <div className="text-center py-12 text-gray-400 text-sm">No opportunities match your filters.</div>
+            ) : filtered.map(o=>(
+              <OppCard key={o.id} opp={o}
+                onEdit={o=>{setModalOpp(o);setShowModal(true);}}
+                onDelete={handleDelete}/>
+            ))}
+          </div>
+
+          {showModal && (
+            <OppModal opp={modalOpp} onSave={handleSave} onClose={()=>{setShowModal(false);setModalOpp(null);}}/>
+          )}
+        </div>
+      );
+    }
+
+    // ─── Submission Log Tab ───────────────────────────────────────────────────
+
+    function SubmissionLogTab({ log, setLog }) {
+      const [showModal, setShowModal] = useState(false);
+      const [editEntry, setEditEntry] = useState(null);
+
+      const thisYear = new Date().getFullYear();
+      const wins = log.filter(e=>["Awarded","Shortlisted"].includes(e.outcome)).length;
+      const winRate = log.length ? Math.round((wins/log.length)*100) : 0;
+      const seriesCount = BODIES_OF_WORK.reduce((acc,b)=>{acc[b]=log.filter(e=>e.bodyOfWork===b).length;return acc;},{});
+      const topSeries = Object.entries(seriesCount).sort((a,b)=>b[1]-a[1])[0];
+
+      function handleSave(entry) {
+        setLog(prev=>{
+          const idx=prev.findIndex(e=>e.id===entry.id);
+          if(idx>=0){const n=[...prev];n[idx]=entry;return n;}
+          return [...prev,entry];
+        });
+        setShowModal(false); setEditEntry(null);
+      }
+
+      function handleDelete(id) {
+        if (window.confirm("Delete this log entry?")) setLog(prev=>prev.filter(e=>e.id!==id));
+      }
+
+      const OC = {
+        "Awarded":"bg-green-100 text-green-700 border-green-300",
+        "Shortlisted":"bg-purple-100 text-purple-700 border-purple-300",
+        "Not Selected":"bg-gray-100 text-gray-500 border-gray-300",
+        "Pending":"bg-yellow-100 text-yellow-700 border-yellow-300",
+        "Declined":"bg-red-100 text-red-500 border-red-300",
+      };
+
+      return (
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 gap-4" style={{gridTemplateColumns:"repeat(4, minmax(0,1fr))"}}>
+            {[
+              {label:"Total Submitted",       value:log.length},
+              {label:`This Year (${thisYear})`,value:log.filter(e=>e.dateSubmitted?.startsWith(String(thisYear))).length},
+              {label:"Win / Shortlist Rate",   value:`${winRate}%`},
+              {label:"Top Series",             value:topSeries?.[0]||"—"},
+            ].map(c=>(
+              <div key={c.label} className="rounded-xl border border-gray-200 bg-white p-4">
+                <div className="text-xl font-bold" style={{color:COLORS.nearBlack}}>{c.value}</div>
+                <div className="text-xs text-gray-400 mt-0.5">{c.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold uppercase tracking-wide" style={{color:COLORS.nearBlack}}>Submission Log</h3>
+            <div className="flex gap-2">
+              <button onClick={()=>exportCSV(log,"submission_log.csv")}
+                className="flex items-center gap-1 px-3 py-1.5 rounded border border-gray-300 text-xs hover:bg-gray-100 font-medium">
+                <Download size={13}/> CSV
+              </button>
+              <button onClick={()=>{setEditEntry(null);setShowModal(true);}}
+                className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-semibold"
+                style={{backgroundColor:COLORS.rust, color:COLORS.cream}}>
+                <Plus size={13}/> Log Submission
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {log.length === 0 ? (
+              <div className="text-center py-12 text-gray-400 text-sm">No submissions logged yet.</div>
+            ) : [...log].sort((a,b)=>(b.dateSubmitted||"").localeCompare(a.dateSubmitted||"")).map(entry=>(
+              <div key={entry.id} className="bg-white rounded-lg border border-gray-200 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-medium ${OC[entry.outcome]||""}`}>
+                        {entry.outcome}
+                      </span>
+                      <span className="text-xs text-gray-400">{formatDate(entry.dateSubmitted)}</span>
+                    </div>
+                    <p className="font-semibold text-sm" style={{color:COLORS.nearBlack}}>{entry.opportunityName}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      <BookOpen size={10}/> {entry.bodyOfWork}
+                    </p>
+                    {entry.notes && (
+                      <p className="text-xs text-gray-500 mt-2 leading-relaxed border-t border-gray-100 pt-2">{entry.notes}</p>
+                    )}
+                  </div>
+                  <div className="flex gap-1 flex-shrink-0">
+                    <button onClick={()=>{setEditEntry(entry);setShowModal(true);}} className="p-1.5 rounded hover:bg-gray-100 text-gray-400"><Edit2 size={13}/></button>
+                    <button onClick={()=>handleDelete(entry.id)} className="p-1.5 rounded hover:bg-red-50 text-gray-400"><Trash2 size={13}/></button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {showModal && (
+            <LogModal entry={editEntry} onSave={handleSave} onClose={()=>{setShowModal(false);setEditEntry(null);}}/>
+          )}
+        </div>
+      );
+    }
+
+    // ─── Main App ─────────────────────────────────────────────────────────────
+
+    const NAV_ITEMS = [
+      { id:"home",        label:"Dashboard",                icon:BarChart2,   tabFilter:null },
+      { id:"residencies", label:"Residencies & Fellowships", icon:BookOpen,    tabFilter:null },
+      { id:"grants",      label:"Grants",                   icon:Award,       tabFilter:null },
+      { id:"contests",    label:"Contests & Awards",         icon:Tag,         tabFilter:null },
+      { id:"identity",    label:"Identity-Based",            icon:Layers,      tabFilter:"identity" },
+      { id:"log",         label:"Submission Log",            icon:Calendar,    tabFilter:null },
+    ];
+
+    const TAB_TYPE_MAP = {
+      residencies:["residency","fellowship"],
+      grants:["grant"],
+      contests:["contest","award"],
+    };
+
+    function App() {
+      const [opportunities, setOpportunities] = useLocalStorage("hcs_opportunities", SAMPLE_OPPORTUNITIES);
+      const [log,           setLog]           = useLocalStorage("hcs_log",           SAMPLE_LOG);
+      const [activeTab,     setActiveTab]     = useState("home");
+      const [sidebarOpen,   setSidebarOpen]   = useState(false);
+
+      function getTabFilter(tabId) {
+        if (tabId === "identity") return "identity";
+        if (TAB_TYPE_MAP[tabId])  return TAB_TYPE_MAP[tabId];
+        return null;
+      }
+
+      function getCount(tabId) {
+        if (tabId === "log")  return log.length;
+        if (tabId === "home") return null;
+        const f = getTabFilter(tabId);
+        if (f === "identity") return opportunities.filter(o=>o.identityTags?.some(t=>["Veteran","Women","LGBTQ+","Emerging"].includes(t))).length;
+        if (Array.isArray(f)) return opportunities.filter(o=>f.includes(o.type)).length;
+        return opportunities.length;
+      }
+
+      const currentNav = NAV_ITEMS.find(n=>n.id===activeTab);
+
+      return (
+        <div className="min-h-screen flex flex-col" style={{backgroundColor:COLORS.cream, fontFamily:"'Inter', system-ui, sans-serif"}}>
+          {/* Header */}
+          <header className="border-b border-gray-200 sticky top-0 z-40" style={{backgroundColor:"rgba(255,255,255,0.9)", backdropFilter:"blur(8px)"}}>
+            <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center gap-3">
+              <button className="md:hidden p-1.5 rounded hover:bg-gray-100" onClick={()=>setSidebarOpen(o=>!o)}>
+                <Filter size={18} style={{color:COLORS.rust}}/>
+              </button>
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{backgroundColor:COLORS.rust}}>
+                  <Award size={14} style={{color:COLORS.cream}}/>
+                </div>
+                <div>
+                  <span className="font-bold text-sm leading-none block" style={{color:COLORS.nearBlack}}>Opportunity Tracker</span>
+                  <span className="text-xs text-gray-400 leading-none">Harper Collab Studio</span>
+                </div>
+              </div>
+              <div className="ml-auto">
+                <span className="text-xs text-gray-400 hidden sm:block">
+                  {opportunities.length} opportunities · {log.length} submissions
+                </span>
+              </div>
+            </div>
+          </header>
+
+          <div className="flex flex-1" style={{maxWidth:"1280px", margin:"0 auto", width:"100%"}}>
+            {/* Sidebar backdrop */}
+            {sidebarOpen && (
+              <div className="fixed inset-0 z-20 md:hidden" style={{backgroundColor:"rgba(0,0,0,0.3)"}}
+                onClick={()=>setSidebarOpen(false)}/>
+            )}
+
+            {/* Sidebar */}
+            <aside className="border-r border-gray-200 flex flex-col py-4"
+              style={{
+                width:"224px", flexShrink:0, backgroundColor:"white",
+                position: window.innerWidth < 768 ? "fixed" : "sticky",
+                top:0, height:"100vh",
+                transform: sidebarOpen || window.innerWidth >= 768 ? "translateX(0)" : "translateX(-100%)",
+                transition:"transform 0.2s",
+                zIndex: window.innerWidth < 768 ? 30 : "auto",
+              }}>
+              {sidebarOpen && (
+                <button className="absolute top-3 right-3 p-1 rounded hover:bg-gray-100"
+                  style={{display: window.innerWidth >= 768 ? "none" : "block"}}
+                  onClick={()=>setSidebarOpen(false)}>
+                  <X size={16}/>
+                </button>
+              )}
+
+              <nav className="flex flex-col gap-0.5 px-3">
+                {NAV_ITEMS.map(item=>{
+                  const active = activeTab === item.id;
+                  const count  = getCount(item.id);
+                  return (
+                    <button key={item.id}
+                      onClick={()=>{setActiveTab(item.id);setSidebarOpen(false);}}
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-left w-full"
+                      style={{
+                        backgroundColor: active ? COLORS.rust : "transparent",
+                        color: active ? COLORS.cream : "#4b5563",
+                        transition:"background-color 0.15s",
+                      }}>
+                      <item.icon size={15}/>
+                      <span style={{flex:1, lineHeight:1.3}}>{item.label}</span>
+                      {count !== null && (
+                        <span className="text-xs rounded-full px-1.5 py-0.5 font-semibold"
+                          style={{
+                            backgroundColor: active ? "rgba(255,255,255,0.2)" : "#f3f4f6",
+                            color: active ? COLORS.cream : "#6b7280",
+                          }}>
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+
+              {/* Tier Legend */}
+              <div className="mt-auto px-4 pb-3 pt-4 border-t border-gray-100">
+                <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold mb-2">Tier Legend</p>
+                {Object.entries(TIER_STYLES).map(([tier,s])=>(
+                  <div key={tier} className="flex items-center gap-2 mb-1.5">
+                    <span className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold"
+                      style={{backgroundColor:s.bg, color:COLORS.cream, fontSize:"10px"}}>{s.label}</span>
+                    <span className="text-xs text-gray-500">{tier}</span>
+                  </div>
+                ))}
+              </div>
+            </aside>
+
+            {/* Main */}
+            <main className="flex-1 min-w-0 p-4 md:p-6" style={{paddingTop:"1.5rem"}}>
+              {activeTab === "home" && <DashboardHome opportunities={opportunities}/>}
+              {activeTab === "log"  && <SubmissionLogTab log={log} setLog={setLog}/>}
+              {["residencies","grants","contests","identity"].includes(activeTab) && (
+                <div>
+                  <h2 className="text-xl font-bold mb-1" style={{color:COLORS.nearBlack}}>{currentNav?.label}</h2>
+                  <p className="text-sm text-gray-400 mb-4">
+                    {activeTab === "identity"
+                      ? "Opportunities tagged Veteran, Women, LGBTQ+, or Emerging"
+                      : `${TAB_TYPE_MAP[activeTab]?.map(t=>t.charAt(0).toUpperCase()+t.slice(1)).join(" & ")} opportunities`}
+                  </p>
+                  <OpportunitiesTab
+                    opportunities={opportunities}
+                    setOpportunities={setOpportunities}
+                    tabFilter={activeTab==="identity" ? "identity" : TAB_TYPE_MAP[activeTab]}
+                  />
+                </div>
+              )}
+            </main>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  </script>
+</body>
+</html>
