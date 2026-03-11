@@ -1,0 +1,200 @@
+{
+  "quarter": {
+    "name": "Spring 2026",
+    "start": "2026-03-23",
+    "end": "2026-05-27",
+    "totalWeeks": 10
+  },
+  "montereyTrip": {
+    "departure": "2026-03-18",
+    "return": "2026-03-21",
+    "note": "You leave tomorrow. Pre-quarter checklist status:"
+  },
+  "courses": [
+    {
+      "code": "PHOT 218",
+      "name": "Analog Photography",
+      "emoji": "🔵",
+      "professor": "Prof. Nolan",
+      "schedule": ["Monday", "Wednesday"],
+      "time": "8:00–10:30 AM",
+      "room": "ALEXAN 114",
+      "elos": { "required": 2, "completed": 0 },
+      "notes": "Assignments are sequential/class-dependent. No fixed calendar dates — verify current assignment with Prof. Nolan.",
+      "passFail": false,
+      "zeroLatePolicy": true,
+      "documentaryAlignment": null
+    },
+    {
+      "code": "PHOT 215",
+      "name": "History of Photography",
+      "emoji": "🟢",
+      "professor": null,
+      "schedule": ["Monday", "Wednesday"],
+      "time": "11:00 AM–1:30 PM",
+      "room": "ALEXAN 108",
+      "elos": { "required": 3, "completed": 0 },
+      "notes": "Video Essay = 40% of grade. Must track progress every week from Week 4 onward.",
+      "videoEssay": {
+        "weight": "40%",
+        "scriptDraftDue": "Week 6 (Class 11)",
+        "storyboardDue": "Class 14"
+      },
+      "passFail": false,
+      "zeroLatePolicy": true,
+      "documentaryAlignment": "FSA documentary content Week 5"
+    },
+    {
+      "code": "SFIN 220",
+      "name": "Studio Finance / Contemporary Art Context",
+      "emoji": "🟣",
+      "professor": null,
+      "schedule": ["Monday", "Wednesday"],
+      "time": "2:00–4:30 PM",
+      "room": "ALEXAN 206",
+      "elos": { "required": 0, "completed": 0 },
+      "notes": "Submit 10 reading responses for grading (self-selected). Log all responses and track running count.",
+      "readingResponses": {
+        "submitCount": 10,
+        "note": "Self-selected — log all completed responses and track count"
+      },
+      "passFail": false,
+      "zeroLatePolicy": false,
+      "documentaryAlignment": "Archives/documentary context Week 8"
+    },
+    {
+      "code": "PHOT 214",
+      "name": "Studio Photography / Lighting",
+      "emoji": "🟠",
+      "professor": null,
+      "schedule": ["Tuesday", "Thursday"],
+      "time": "8:00–10:30 AM",
+      "room": "GRASCO 127",
+      "elos": { "required": 2, "completed": 0 },
+      "notes": "Read Light, Science & Magic chapters before each class. Capture One tethering required.",
+      "passFail": false,
+      "zeroLatePolicy": true,
+      "documentaryAlignment": null
+    }
+  ],
+  "hardCodedDeadlines": [
+    {
+      "task": "Watch Capture One tethering setup video",
+      "dueDate": "2026-03-24",
+      "dueNote": "Before Mar 25 first class",
+      "course": "PHOT 214",
+      "type": "📝 Reading",
+      "zeroLatePolicy": true,
+      "url": null,
+      "notes": "Required before first studio session"
+    },
+    {
+      "task": "Light, Science & Magic — Ch 5: Shape & Contour",
+      "dueDate": "2026-03-26",
+      "course": "PHOT 214",
+      "type": "📝 Reading",
+      "zeroLatePolicy": true,
+      "url": null,
+      "notes": "Read before Thu Mar 26 class"
+    },
+    {
+      "task": "Light, Science & Magic — Ch 7: Glass",
+      "dueDate": "2026-03-31",
+      "course": "PHOT 214",
+      "type": "📝 Reading",
+      "zeroLatePolicy": true,
+      "url": null,
+      "notes": "Read before Tue Mar 31 class"
+    },
+    {
+      "task": "Light, Science & Magic — Ch 6: Metal",
+      "dueDate": "2026-04-07",
+      "course": "PHOT 214",
+      "type": "📝 Reading",
+      "zeroLatePolicy": true,
+      "url": null,
+      "notes": "Read before Tue Apr 7 class"
+    },
+    {
+      "task": "Light, Science & Magic — Ch 8: Arsenal of Light",
+      "dueDate": "2026-04-28",
+      "course": "PHOT 214",
+      "type": "📝 Reading",
+      "zeroLatePolicy": true,
+      "url": null,
+      "notes": "Read before Tue Apr 28 class"
+    },
+    {
+      "task": "Create meme using historical photograph — post to Discussion Board",
+      "dueDate": "2026-03-23",
+      "dueNote": "Before Mar 24",
+      "course": "PHOT 215",
+      "type": "✏️ Discussion Post",
+      "zeroLatePolicy": true,
+      "url": null,
+      "notes": "Pre-quarter task — due before first class"
+    },
+    {
+      "task": "SFIN 220 Pre-Quarter Discussion Board",
+      "dueDate": "2026-03-23",
+      "dueNote": "Before Mar 24",
+      "course": "SFIN 220",
+      "type": "✏️ Discussion Post",
+      "zeroLatePolicy": false,
+      "url": null,
+      "notes": "Pre-quarter task — due before first class"
+    },
+    {
+      "task": "Bring 35mm film camera + 2–4 rolls of film to class",
+      "dueDate": "2026-03-23",
+      "dueNote": "Day 1",
+      "course": "PHOT 218",
+      "type": "🧪 Technical Exercise",
+      "zeroLatePolicy": true,
+      "url": null,
+      "notes": "Physical requirement for first day — camera + film in bag"
+    },
+    {
+      "task": "Research B&W photographer to share with class",
+      "dueDate": "2026-03-23",
+      "dueNote": "Day 1",
+      "course": "PHOT 218",
+      "type": "📝 Reading",
+      "zeroLatePolicy": true,
+      "url": null,
+      "notes": "Come prepared with a photographer to discuss"
+    },
+    {
+      "task": "PHOT 215 Video Essay — Script Draft",
+      "dueDate": "2026-04-27",
+      "dueNote": "~Week 6 (Class 11)",
+      "course": "PHOT 215",
+      "type": "📋 Proposal / Draft",
+      "zeroLatePolicy": true,
+      "url": null,
+      "notes": "40% of grade — script draft milestone"
+    },
+    {
+      "task": "PHOT 215 Video Essay — Storyboard",
+      "dueDate": "2026-05-04",
+      "dueNote": "~Class 14",
+      "course": "PHOT 215",
+      "type": "📋 Proposal / Draft",
+      "zeroLatePolicy": true,
+      "url": null,
+      "notes": "40% of grade — storyboard milestone"
+    }
+  ],
+  "documentaryProjects": [
+    {
+      "title": "Where the Water Holds You",
+      "courses": ["PHOT 218", "PHOT 215"],
+      "notes": "Long-form documentary project — flag when coursework aligns"
+    },
+    {
+      "title": "Thresholds",
+      "courses": ["PHOT 214", "SFIN 220"],
+      "notes": "Studio lighting + conceptual framework — flag when coursework aligns"
+    }
+  ]
+}
