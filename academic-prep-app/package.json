@@ -1,16 +1,17 @@
 {
   "name": "academic-prep-app",
-  "version": "1.0.0",
-  "description": "Daily academic prep briefing app connected to Notion — Spring 2026",
+  "version": "2.0.0",
+  "description": "Standalone daily academic prep app — Spring 2026",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
+    "web": "node src/index.js --web",
     "now": "node src/index.js --now",
+    "start": "node src/index.js",
     "test": "node src/index.js --now --dry-run"
   },
   "dependencies": {
-    "@notionhq/client": "^2.2.15",
     "dotenv": "^16.4.5",
+    "express": "^4.19.2",
     "node-cron": "^3.0.3",
     "node-notifier": "^10.0.1",
     "nodemailer": "^6.9.13"

@@ -1,33 +1,26 @@
 'use strict';
 
 const { validateConfig } = require('./config');
-const { fetchAllTasks } = require('./notion');
+const { getAllTasks } = require('./tasks');
 const { buildBriefing, formatTerminalBriefing, buildNotificationSummary, buildEmailHTML } = require('./briefing');
 const { notify } = require('./notify');
-const { logError } = require('./cache');
+const { startServer } = require('./server');
 
 const args = process.argv.slice(2);
 const RUN_NOW = args.includes('--now');
 const DRY_RUN = args.includes('--dry-run');
+const WEB = args.includes('--web');
+const PORT = (() => {
+  const p = args.find(a => a.startsWith('--port='));
+  return p ? parseInt(p.split('=')[1], 10) : 3000;
+})();
 
 async function runBriefing() {
   const config = validateConfig();
   const today = new Date();
 
-  console.log(`\n⏳ Fetching data from Notion...`);
-  const { tasks, fromCache, cachedAt, error } = await fetchAllTasks(config);
-
-  if (error && tasks.length === 0) {
-    console.error('\n❌ Could not fetch Notion data and no cache is available.');
-    console.error('   Run the app when connected to the internet first to build a cache.');
-    process.exit(1);
-  }
-
-  if (fromCache) {
-    console.log(`   📦 Using cached data from ${cachedAt}`);
-  } else {
-    console.log(`   ✅ Notion data loaded — ${tasks.length} tasks found.`);
-  }
+  const tasks = getAllTasks();
+  console.log(`   ✅ ${tasks.length} task(s) loaded from local data.`);
 
   const briefing = buildBriefing(tasks, today);
   const terminalOutput = formatTerminalBriefing(briefing);
@@ -50,7 +43,6 @@ async function startScheduler() {
   const config = validateConfig();
   const cron = require('node-cron');
   const { notificationHour, notificationMinute, notificationTime } = config;
-
   const cronExpression = `${notificationMinute} ${notificationHour} * * *`;
 
   console.log(`\n📅 Academic Prep Scheduler started.`);
@@ -63,8 +55,7 @@ async function startScheduler() {
     try {
       await runBriefing();
     } catch (err) {
-      logError('Scheduled briefing failed', err);
-      console.error('❌ Briefing failed — see logs/errors.log for details.');
+      console.error('❌ Briefing failed:', err.message);
     }
   });
 }
@@ -73,13 +64,14 @@ async function startScheduler() {
 
 (async () => {
   try {
-    if (RUN_NOW) {
+    if (WEB) {
+      startServer(PORT);
+    } else if (RUN_NOW) {
       await runBriefing();
     } else {
       await startScheduler();
     }
   } catch (err) {
-    logError('Fatal startup error', err);
     console.error('\n❌ Fatal error:', err.message);
     process.exit(1);
   }

@@ -9,7 +9,7 @@ const {
   getQuarterWeek,
   getDayName,
 } = require('./readings');
-const { filterByDateRange, filterIncomplete } = require('./notion');
+const { filterByDateRange, filterIncomplete } = require('./tasks');
 
 // ─── Date Utilities ─────────────────────────────────────────────────────────
 
@@ -409,13 +409,6 @@ function formatTerminalBriefing(briefing) {
     briefing.documentaryFlags.forEach(f => lines.push(`  ${f}`));
   }
 
-  // ── Notion Sync Warning ──
-  if (briefing.notionEmpty) {
-    lines.push('');
-    lines.push('⚠️  No deadlines found in Notion — verify database sync.');
-    lines.push('   Check your NOTION_DATABASE_ID and API key in .env');
-  }
-
   lines.push('');
   lines.push(LINE);
   lines.push('   Strategy with soul. Foundation before aesthetics.');
@@ -522,7 +515,6 @@ ${briefing.documentaryFlags.length > 0 ? `
 <h2>🎞️ Strategic Flag — Documentary Alignment</h2>
 <ul>${briefing.documentaryFlags.map(f => `<li>${f}</li>`).join('')}</ul>` : ''}
 
-${briefing.notionEmpty ? `<div class="warning">⚠️ No deadlines found in Notion — verify database sync.</div>` : ''}
 
 <div class="footer">Strategy with soul. Foundation before aesthetics.</div>
 </body>

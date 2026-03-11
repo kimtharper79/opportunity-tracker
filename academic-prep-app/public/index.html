@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Academic Prep — Spring 2026</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --border: #e0ddd6;
+    --accent: #1a1a2e;
+    --accent-light: #2d2d4e;
+    --text: #1a1a1a;
+    --muted: #777;
+    --done-bg: #f0f7f0;
+    --done-text: #4a7c59;
+    --urgent: #c0392b;
+    --warn-bg: #fff8e1;
+    --warn-border: #f9a825;
+    --phot218: #3498db;
+    --phot215: #27ae60;
+    --sfin220: #8e44ad;
+    --phot214: #e67e22;
+  }
+
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--accent);
+    color: white;
+    padding: 18px 32px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+
+  header h1 { font-size: 20px; font-weight: bold; letter-spacing: 0.5px; }
+  header .subtitle { font-size: 13px; opacity: 0.7; font-style: italic; }
+
+  nav {
+    display: flex;
+    gap: 4px;
+    background: var(--accent-light);
+    padding: 0 32px;
+  }
+
+  nav button {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.7);
+    padding: 10px 18px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: Georgia, serif;
+    border-bottom: 3px solid transparent;
+    transition: all 0.15s;
+  }
+
+  nav button.active, nav button:hover {
+    color: white;
+    border-bottom-color: white;
+  }
+
+  main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
+
+  /* ── Tabs ── */
+  .tab { display: none; }
+  .tab.active { display: block; }
+
+  /* ── Briefing ── */
+  #briefing-output {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px 28px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  /* ── Filters ── */
+  .filters {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    align-items: center;
+  }
+
+  .filter-btn {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: white;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: Georgia, serif;
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+
+  .filter-btn.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+
+  /* ── Add Task Form ── */
+  .add-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px 24px;
+    margin-bottom: 24px;
+  }
+
+  .add-form h3 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .form-grid .full { grid-column: 1 / -1; }
+
+  .form-grid input,
+  .form-grid select,
+  .form-grid textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    font-size: 13px;
+    font-family: Georgia, serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  .form-grid input:focus,
+  .form-grid select:focus,
+  .form-grid textarea:focus {
+    outline: 2px solid var(--accent);
+    background: white;
+  }
+
+  .form-grid textarea { resize: vertical; min-height: 60px; }
+
+  .form-actions { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
+
+  .btn {
+    padding: 8px 18px;
+    border: none;
+    font-size: 13px;
+    font-family: Georgia, serif;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-ghost { background: none; color: var(--muted); border: 1px solid var(--border); }
+
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  /* ── Task List ── */
+  .task-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .task-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--border);
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: opacity 0.2s;
+  }
+
+  .task-card.done { background: var(--done-bg); opacity: 0.7; }
+  .task-card[data-course="PHOT 218"] { border-left-color: var(--phot218); }
+  .task-card[data-course="PHOT 215"] { border-left-color: var(--phot215); }
+  .task-card[data-course="SFIN 220"] { border-left-color: var(--sfin220); }
+  .task-card[data-course="PHOT 214"] { border-left-color: var(--phot214); }
+
+  .task-check {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-top: 2px;
+    accent-color: var(--accent);
+  }
+
+  .task-body { flex: 1; min-width: 0; }
+
+  .task-name {
+    font-size: 15px;
+    line-height: 1.4;
+    margin-bottom: 4px;
+  }
+
+  .task-card.done .task-name {
+    text-decoration: line-through;
+    color: var(--done-text);
+  }
+
+  .task-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .tag {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 2px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  .tag.urgent { background: #fdecea; border-color: #f5c6c3; color: var(--urgent); font-weight: bold; }
+  .tag.course-phot218 { background: #ebf5fb; border-color: #aed6f1; color: #1a5276; }
+  .tag.course-phot215 { background: #eafaf1; border-color: #a9dfbf; color: #1e8449; }
+  .tag.course-sfin220 { background: #f5eef8; border-color: #d7bde2; color: #6c3483; }
+  .tag.course-phot214 { background: #fef9e7; border-color: #f9e79f; color: #9a6d02; }
+
+  .task-notes {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 5px;
+    font-style: italic;
+  }
+
+  .task-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .task-actions button {
+    background: none;
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    color: var(--muted);
+    font-family: Georgia, serif;
+    white-space: nowrap;
+  }
+
+  .task-actions button:hover { background: var(--bg); color: var(--text); }
+  .task-actions .btn-delete:hover { color: var(--urgent); border-color: var(--urgent); }
+
+  /* ── Section headers in task list ── */
+  .section-header {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    padding: 12px 0 6px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+    font-style: italic;
+    font-size: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .loading { text-align: center; padding: 40px; color: var(--muted); font-style: italic; }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--accent);
+    color: white;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-family: Georgia, serif;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 999;
+  }
+
+  #toast.show { opacity: 1; }
+
+  /* ── Stats bar ── */
+  .stats-bar {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 12px 18px;
+    text-align: center;
+    flex: 1;
+    min-width: 100px;
+  }
+
+  .stat-num { font-size: 26px; font-weight: bold; color: var(--accent); }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+
+  @media (max-width: 600px) {
+    header { padding: 14px 16px; flex-direction: column; gap: 4px; }
+    nav { padding: 0 16px; }
+    main { padding: 20px 16px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid .full { grid-column: 1; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📚 Academic Prep — Spring 2026</h1>
+  <span class="subtitle" id="header-date"></span>
+</header>
+
+<nav>
+  <button class="active" onclick="showTab('tasks')">Tasks</button>
+  <button onclick="showTab('briefing')">Daily Briefing</button>
+</nav>
+
+<main>
+  <!-- ── Tasks Tab ── -->
+  <div id="tab-tasks" class="tab active">
+
+    <div class="stats-bar" id="stats-bar"></div>
+
+    <div class="add-form">
+      <h3>Add Task</h3>
+      <div class="form-grid">
+        <input class="full" type="text" id="f-task" placeholder="Task name *" required>
+        <select id="f-course">
+          <option value="">— Course —</option>
+          <option value="PHOT 218">🔵 PHOT 218 — Analog Photography</option>
+          <option value="PHOT 215">🟢 PHOT 215 — History of Photography</option>
+          <option value="SFIN 220">🟣 SFIN 220 — Studio Finance</option>
+          <option value="PHOT 214">🟠 PHOT 214 — Studio Photography / Lighting</option>
+        </select>
+        <input type="date" id="f-due" title="Due date">
+        <select id="f-type">
+          <option value="">— Type —</option>
+          <option value="📝 Reading">📝 Reading</option>
+          <option value="✏️ Discussion Post">✏️ Discussion Post</option>
+          <option value="🎨 Studio / Assignment">🎨 Studio / Assignment</option>
+          <option value="📋 Proposal / Draft">📋 Proposal / Draft</option>
+          <option value="🎬 Critique">🎬 Critique</option>
+          <option value="🧪 Technical Exercise">🧪 Technical Exercise</option>
+          <option value="📊 Other">📊 Other</option>
+        </select>
+        <input type="text" id="f-weight" placeholder="Weight (e.g. 40%)">
+        <input type="text" id="f-time" placeholder="Time estimate (e.g. 2 hrs)">
+        <textarea class="full" id="f-notes" placeholder="Notes"></textarea>
+        <input type="url" id="f-url" placeholder="URL (optional)" class="full">
+      </div>
+      <div class="form-actions">
+        <label class="checkbox-row">
+          <input type="checkbox" id="f-zero-late"> Zero late policy 🚨
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="f-pass-fail"> Pass/Fail
+        </label>
+        <div style="flex:1"></div>
+        <button class="btn btn-ghost" onclick="clearForm()">Clear</button>
+        <button class="btn btn-primary" onclick="submitTask()">Add Task</button>
+      </div>
+    </div>
+
+    <div class="filters">
+      <span style="font-size:12px; color:var(--muted); margin-right:4px;">Show:</span>
+      <button class="filter-btn active" onclick="setFilter('active')">Active</button>
+      <button class="filter-btn" onclick="setFilter('all')">All</button>
+      <button class="filter-btn" onclick="setFilter('done')">Completed</button>
+      <span style="margin-left:auto; font-size:12px; color:var(--muted);">Filter by course:</span>
+      <button class="filter-btn" onclick="setCourseFilter('')">All Courses</button>
+      <button class="filter-btn" onclick="setCourseFilter('PHOT 218')">🔵 218</button>
+      <button class="filter-btn" onclick="setCourseFilter('PHOT 215')">🟢 215</button>
+      <button class="filter-btn" onclick="setCourseFilter('SFIN 220')">🟣 SFIN</button>
+      <button class="filter-btn" onclick="setCourseFilter('PHOT 214')">🟠 214</button>
+    </div>
+
+    <div id="task-list" class="task-list">
+      <div class="loading">Loading tasks…</div>
+    </div>
+  </div>
+
+  <!-- ── Briefing Tab ── -->
+  <div id="tab-briefing" class="tab">
+    <div style="margin-bottom:16px; display:flex; justify-content:flex-end;">
+      <button class="btn btn-primary" onclick="loadBriefing()">Refresh Briefing</button>
+    </div>
+    <div id="briefing-output" class="loading">Loading briefing…</div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+
+let allTasks = [];
+let statusFilter = 'active';
+let courseFilter = '';
+let editingId = null;
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+  const now = new Date();
+  document.getElementById('header-date').textContent = now.toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+  });
+  loadTasks();
+});
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'briefing') loadBriefing();
+}
+
+// ─── API helpers ──────────────────────────────────────────────────────────────
+
+async function api(method, path, body) {
+  const res = await fetch(path, {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : {},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json();
+}
+
+// ─── Load & Render Tasks ──────────────────────────────────────────────────────
+
+async function loadTasks() {
+  allTasks = await api('GET', '/api/tasks');
+  renderTasks();
+  renderStats();
+}
+
+function setFilter(f) {
+  statusFilter = f;
+  document.querySelectorAll('.filters .filter-btn').forEach((b, i) => {
+    if (i < 3) b.classList.toggle('active', ['active','all','done'][i] === f);
+  });
+  renderTasks();
+}
+
+function setCourseFilter(c) {
+  courseFilter = c;
+  document.querySelectorAll('.filters .filter-btn').forEach((b, i) => {
+    if (i >= 3) b.classList.toggle('active',
+      (c === '' && i === 3) ||
+      (c === 'PHOT 218' && i === 4) ||
+      (c === 'PHOT 215' && i === 5) ||
+      (c === 'SFIN 220' && i === 6) ||
+      (c === 'PHOT 214' && i === 7)
+    );
+  });
+  renderTasks();
+}
+
+function renderStats() {
+  const total = allTasks.length;
+  const done = allTasks.filter(t => isDone(t)).length;
+  const overdue = allTasks.filter(t => !isDone(t) && isOverdue(t)).length;
+  const dueToday = allTasks.filter(t => !isDone(t) && t.dueDate === todayStr()).length;
+
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat"><div class="stat-num">${total - done}</div><div class="stat-label">Active</div></div>
+    <div class="stat"><div class="stat-num">${dueToday}</div><div class="stat-label">Due Today</div></div>
+    <div class="stat" style="${overdue ? 'border-color:var(--urgent)' : ''}">
+      <div class="stat-num" style="${overdue ? 'color:var(--urgent)' : ''}">${overdue}</div>
+      <div class="stat-label">Overdue</div>
+    </div>
+    <div class="stat"><div class="stat-num">${done}</div><div class="stat-label">Completed</div></div>
+  `;
+}
+
+function todayStr() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function isDone(t) {
+  return (t.status || '').toLowerCase().includes('done') || (t.status || '').toLowerCase().includes('submitted');
+}
+
+function isOverdue(t) {
+  return t.dueDate && t.dueDate < todayStr() && !isDone(t);
+}
+
+function renderTasks() {
+  let tasks = allTasks;
+
+  if (courseFilter) tasks = tasks.filter(t => t.course === courseFilter);
+
+  if (statusFilter === 'active') tasks = tasks.filter(t => !isDone(t));
+  else if (statusFilter === 'done') tasks = tasks.filter(t => isDone(t));
+
+  // Sort: overdue first, then by due date, then no-date at end
+  tasks = [...tasks].sort((a, b) => {
+    const aOver = isOverdue(a), bOver = isOverdue(b);
+    if (aOver && !bOver) return -1;
+    if (!aOver && bOver) return 1;
+    if (!a.dueDate && b.dueDate) return 1;
+    if (a.dueDate && !b.dueDate) return -1;
+    return (a.dueDate || '').localeCompare(b.dueDate || '');
+  });
+
+  const container = document.getElementById('task-list');
+
+  if (tasks.length === 0) {
+    container.innerHTML = `<div class="empty-state">${statusFilter === 'done' ? 'No completed tasks yet.' : 'No tasks — add one above!'}</div>`;
+    return;
+  }
+
+  // Group by section: Overdue / Due Today / Upcoming / No Date / Done
+  const sections = groupTasks(tasks);
+  let html = '';
+
+  for (const [label, items] of Object.entries(sections)) {
+    if (items.length === 0) continue;
+    html += `<div class="section-header">${label} (${items.length})</div>`;
+    items.forEach(t => { html += renderTaskCard(t); });
+  }
+
+  container.innerHTML = html;
+}
+
+function groupTasks(tasks) {
+  const today = todayStr();
+  const groups = {
+    'Overdue': [],
+    'Due Today': [],
+    'Upcoming': [],
+    'No Due Date': [],
+    'Completed': [],
+  };
+  tasks.forEach(t => {
+    if (isDone(t)) groups['Completed'].push(t);
+    else if (!t.dueDate) groups['No Due Date'].push(t);
+    else if (t.dueDate < today) groups['Overdue'].push(t);
+    else if (t.dueDate === today) groups['Due Today'].push(t);
+    else groups['Upcoming'].push(t);
+  });
+  return groups;
+}
+
+function courseTag(course) {
+  if (!course) return '';
+  const map = {
+    'PHOT 218': 'course-phot218',
+    'PHOT 215': 'course-phot215',
+    'SFIN 220': 'course-sfin220',
+    'PHOT 214': 'course-phot214',
+  };
+  const cls = map[course] || '';
+  return `<span class="tag ${cls}">${course}</span>`;
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T12:00:00');
+  return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function renderTaskCard(t) {
+  const done = isDone(t);
+  const overdue = isOverdue(t);
+  const doneAttr = done ? 'checked' : '';
+  const doneCls = done ? 'done' : '';
+  const overdueTag = overdue ? `<span class="tag urgent">Overdue</span>` : '';
+  const zeroTag = t.zeroLatePolicy ? `<span class="tag urgent">🚨 Zero Late</span>` : '';
+  const weightTag = t.weight ? `<span class="tag">${t.weight}</span>` : '';
+  const dateTag = t.dueDate ? `<span class="tag">📅 ${formatDate(t.dueDate)}</span>` : '';
+  const typeTag = t.type ? `<span class="tag">${t.type}</span>` : '';
+  const urlLink = t.url ? `<a href="${t.url}" target="_blank" style="font-size:12px; color:var(--muted);">🔗 Link</a>` : '';
+
+  const toggleFn = done ? `undoneTask('${t.id}')` : `doneTask('${t.id}')`;
+
+  return `
+<div class="task-card ${doneCls}" data-id="${t.id}" data-course="${t.course || ''}">
+  <input type="checkbox" class="task-check" ${doneAttr} onchange="${toggleFn}" title="${done ? 'Mark incomplete' : 'Mark complete'}">
+  <div class="task-body">
+    <div class="task-name">${escHtml(t.task)}</div>
+    <div class="task-meta">
+      ${courseTag(t.course)}
+      ${dateTag}
+      ${typeTag}
+      ${weightTag}
+      ${overdueTag}
+      ${zeroTag}
+      ${urlLink}
+    </div>
+    ${t.quickNotes ? `<div class="task-notes">📌 ${escHtml(t.quickNotes)}</div>` : ''}
+  </div>
+  <div class="task-actions">
+    <button onclick="editTask('${t.id}')">Edit</button>
+    <button class="btn-delete" onclick="deleteTask('${t.id}')">Delete</button>
+  </div>
+</div>`;
+}
+
+// ─── Task Actions ─────────────────────────────────────────────────────────────
+
+async function doneTask(id) {
+  await api('POST', `/api/tasks/${id}/done`);
+  allTasks = allTasks.map(t => t.id === id ? { ...t, status: '✅ Done' } : t);
+  renderTasks();
+  renderStats();
+  toast('Marked complete');
+}
+
+async function undoneTask(id) {
+  await api('POST', `/api/tasks/${id}/undone`);
+  allTasks = allTasks.map(t => t.id === id ? { ...t, status: '⬜ Not Started' } : t);
+  renderTasks();
+  renderStats();
+  toast('Marked incomplete');
+}
+
+async function deleteTask(id) {
+  const task = allTasks.find(t => t.id === id);
+  if (!confirm(`Delete "${task?.task}"?`)) return;
+  await api('DELETE', `/api/tasks/${id}`);
+  allTasks = allTasks.filter(t => t.id !== id);
+  renderTasks();
+  renderStats();
+  toast('Task deleted');
+}
+
+function editTask(id) {
+  const t = allTasks.find(t => t.id === id);
+  if (!t) return;
+  editingId = id;
+  document.getElementById('f-task').value = t.task || '';
+  document.getElementById('f-course').value = t.course || '';
+  document.getElementById('f-due').value = t.dueDate || '';
+  document.getElementById('f-type').value = t.type || '';
+  document.getElementById('f-weight').value = t.weight || '';
+  document.getElementById('f-time').value = t.timeEst || '';
+  document.getElementById('f-notes').value = t.quickNotes || '';
+  document.getElementById('f-url').value = t.url || '';
+  document.getElementById('f-zero-late').checked = !!t.zeroLatePolicy;
+  document.getElementById('f-pass-fail').checked = !!t.passFail;
+  document.querySelector('.add-form h3').textContent = 'Edit Task';
+  document.querySelector('.btn-primary').textContent = 'Save Changes';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function submitTask() {
+  const taskName = document.getElementById('f-task').value.trim();
+  if (!taskName) { toast('Task name is required'); return; }
+
+  const data = {
+    task: taskName,
+    course: document.getElementById('f-course').value,
+    dueDate: document.getElementById('f-due').value || null,
+    type: document.getElementById('f-type').value,
+    weight: document.getElementById('f-weight').value || null,
+    timeEst: document.getElementById('f-time').value || null,
+    quickNotes: document.getElementById('f-notes').value || null,
+    url: document.getElementById('f-url').value || null,
+    zeroLatePolicy: document.getElementById('f-zero-late').checked,
+    passFail: document.getElementById('f-pass-fail').checked,
+  };
+
+  if (editingId) {
+    const updated = await api('PATCH', `/api/tasks/${editingId}`, data);
+    allTasks = allTasks.map(t => t.id === editingId ? updated : t);
+    editingId = null;
+    document.querySelector('.add-form h3').textContent = 'Add Task';
+    document.querySelector('.btn-primary').textContent = 'Add Task';
+    toast('Task updated');
+  } else {
+    const newTask = await api('POST', '/api/tasks', data);
+    allTasks.push(newTask);
+    toast('Task added');
+  }
+
+  clearForm();
+  renderTasks();
+  renderStats();
+}
+
+function clearForm() {
+  ['f-task','f-course','f-due','f-type','f-weight','f-time','f-notes','f-url'].forEach(id => {
+    const el = document.getElementById(id);
+    el.value = el.tagName === 'SELECT' ? '' : '';
+  });
+  document.getElementById('f-zero-late').checked = false;
+  document.getElementById('f-pass-fail').checked = false;
+  editingId = null;
+  document.querySelector('.add-form h3').textContent = 'Add Task';
+  document.querySelector('.btn-primary').textContent = 'Add Task';
+}
+
+// ─── Briefing ─────────────────────────────────────────────────────────────────
+
+async function loadBriefing() {
+  const el = document.getElementById('briefing-output');
+  el.textContent = 'Loading…';
+  try {
+    const data = await api('GET', '/api/briefing');
+    // Build a readable text version from the briefing data object
+    el.textContent = formatBriefingText(data);
+  } catch (e) {
+    el.textContent = 'Failed to load briefing: ' + e.message;
+  }
+}
+
+function formatBriefingText(b) {
+  const LINE = '════════════════════════════════════════════════════';
+  const DIVIDER = '────────────────────────────────────────────────────';
+  const lines = [];
+
+  const fmtDate = (iso) => {
+    const d = new Date(iso + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  };
+
+  const fmtFullDate = (d) => new Date(d).toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+  });
+
+  const fmtTask = (t) => {
+    const zl = t.zeroLatePolicy ? ' 🚨' : '';
+    const w = t.weight ? ` [${t.weight}]` : '';
+    const c = t.course ? ` | ${t.course}` : '';
+    const ty = t.type ? ` | ${t.type}` : '';
+    const notes = t.quickNotes ? `\n     📌 ${t.quickNotes}` : '';
+    return `  • ${t.task}${c}${ty}${w}${zl}${notes}`;
+  };
+
+  lines.push('');
+  lines.push(LINE);
+  lines.push(`📚 DAILY ACADEMIC BRIEFING — ${fmtFullDate(b.today)}`);
+  if (b.quarterStatus === 'active') lines.push(`   Spring 2026 · Week ${b.weekNum} · ${b.dayName}`);
+  lines.push(LINE);
+
+  if (b.quarterStatus === 'pre') {
+    lines.push('');
+    lines.push('⏳ PRE-QUARTER MODE — Complete all pre-quarter tasks before classes start.');
+  } else if (b.quarterStatus === 'post') {
+    lines.push('');
+    lines.push('🎓 QUARTER COMPLETE — Spring 2026 has ended. Great work, Kimberly!');
+    lines.push('');
+    return lines.join('\n');
+  }
+
+  if (b.monterey && b.monterey.show) {
+    lines.push('');
+    lines.push(`⚠️  ${b.monterey.message}`);
+    if (b.monterey.incompleteTasks.length > 0) {
+      b.monterey.incompleteTasks.forEach(t => lines.push(fmtTask(t)));
+    } else {
+      lines.push('   ✅ All pre-quarter tasks complete — have a great trip!');
+    }
+  }
+
+  lines.push('');
+  lines.push("📍 TODAY'S CLASSES");
+  if (!b.todaysClasses || b.todaysClasses.length === 0) {
+    lines.push('   No classes today — studio/reading day.');
+  } else {
+    b.todaysClasses.forEach(c => {
+      lines.push(`  ${c.emoji} ${c.code}: ${c.name}`);
+      lines.push(`     🕐 ${c.time} · 📍 ${c.room}`);
+    });
+  }
+
+  lines.push('');
+  lines.push('🚨 DUE TODAY');
+  if (!b.dueToday || b.dueToday.length === 0) {
+    lines.push('   Nothing due today — stay ahead.');
+  } else {
+    b.dueToday.forEach(t => lines.push(fmtTask(t)));
+  }
+
+  lines.push('');
+  lines.push('📅 NEXT 3 DAYS');
+  if (!b.dueNext3 || b.dueNext3.length === 0) {
+    lines.push('   Nothing due in the next 3 days.');
+  } else {
+    b.dueNext3.forEach(t => lines.push(`  ${fmtDate(t.dueDate)} — ${fmtTask(t).trim()}`));
+  }
+
+  lines.push('');
+  lines.push("📖 TODAY'S READING / WATCHING");
+  if (b.dailyReading) {
+    const r = b.dailyReading;
+    const lbl = r.type === 'YouTube' ? '▶️  Watch' : r.type === 'podcast' ? '🎙️  Listen' : '📖 Read';
+    lines.push(`  ${lbl}: ${r.title}`);
+    if (r.author) lines.push(`     by ${r.author}`);
+    if (r.url) lines.push(`     🔗 ${r.url}`);
+    if (r.estimatedMinutes) lines.push(`     ⏱  Estimated time: ${r.estimatedMinutes} min`);
+    if (r.context) lines.push(`     💡 ${r.context}`);
+    if (r.daysUntilDue !== undefined) {
+      const urg = r.daysUntilDue <= 1 ? '🔴' : r.daysUntilDue <= 3 ? '🟠' : '🟡';
+      lines.push(`     ${urg} Due in ${r.daysUntilDue} day(s) — ${r.hardDeadline}`);
+    }
+  } else {
+    lines.push('   No specific reading assigned — review most recent course materials.');
+  }
+
+  lines.push('');
+  lines.push('🎯 UPCOMING CRITIQUES & STUDIO PREP');
+  const critiques = b.upcomingCritiques || [];
+  if (critiques.length === 0) {
+    lines.push('   No critiques or major projects due within 7 days.');
+  } else {
+    critiques.forEach(t => {
+      lines.push(`  • ${t.task} | Due ${fmtDate(t.dueDate)}${t.zeroLatePolicy ? ' 🚨' : ''}`);
+      if (t.quickNotes) lines.push(`    📌 ${t.quickNotes}`);
+    });
+  }
+
+  if (b.showVideoEssay) {
+    lines.push('');
+    lines.push('🎬 VIDEO ESSAY REMINDER (PHOT 215 — 40% of grade)');
+    lines.push("   Script Draft due ~Week 6 (Class 11) · Storyboard due ~Class 14.");
+    lines.push("   If you haven't touched the essay this week — block time today.");
+  }
+
+  if (b.sfinResponseCount > 0 || b.dayName === 'Friday') {
+    lines.push('');
+    lines.push('🟣 SFIN 220 READING RESPONSES');
+    lines.push(`   Logged responses: ${b.sfinResponseCount} / 10 (submit best 10 for grading)`);
+    if (b.sfinResponseCount < 10) lines.push('   Log every response — you select which 10 to submit at quarter end.');
+  }
+
+  lines.push('');
+  lines.push('🎟️  ELO STATUS');
+  (b.eloStatus || []).forEach(e => {
+    lines.push(`  ${e.code}: ${e.completed}/${e.required} completed${e.urgent ? ' 🚨 URGENT' : ''}`);
+  });
+
+  if (b.documentaryFlags && b.documentaryFlags.length > 0) {
+    lines.push('');
+    lines.push('🎞️  STRATEGIC FLAG — DOCUMENTARY ALIGNMENT');
+    b.documentaryFlags.forEach(f => lines.push(`  ${f}`));
+  }
+
+  lines.push('');
+  lines.push(LINE);
+  lines.push('   Strategy with soul. Foundation before aesthetics.');
+  lines.push(LINE);
+  lines.push('');
+
+  return lines.join('\n');
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
+
+function escHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

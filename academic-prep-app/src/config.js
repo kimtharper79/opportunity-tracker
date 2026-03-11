@@ -3,7 +3,7 @@
 const path = require('path');
 const fs = require('fs');
 
-// Load .env from the app root directory
+// Load .env from the app root directory (optional — only needed for email)
 const envPath = path.resolve(__dirname, '..', '.env');
 if (fs.existsSync(envPath)) {
   require('dotenv').config({ path: envPath });
@@ -12,18 +12,6 @@ if (fs.existsSync(envPath)) {
 }
 
 function validateConfig() {
-  const missing = [];
-
-  if (!process.env.NOTION_API_KEY) missing.push('NOTION_API_KEY');
-  if (!process.env.NOTION_DATABASE_ID) missing.push('NOTION_DATABASE_ID');
-
-  if (missing.length > 0) {
-    console.error('\n❌ Missing required environment variables:');
-    missing.forEach(k => console.error(`   • ${k}`));
-    console.error('\nCopy .env.example to .env and fill in your values.\n');
-    process.exit(1);
-  }
-
   const notificationTime = process.env.NOTIFICATION_TIME || '07:30';
   const timeParts = notificationTime.split(':');
   if (timeParts.length !== 2 || isNaN(timeParts[0]) || isNaN(timeParts[1])) {
@@ -32,8 +20,6 @@ function validateConfig() {
   }
 
   return {
-    notionApiKey: process.env.NOTION_API_KEY,
-    notionDatabaseId: process.env.NOTION_DATABASE_ID,
     notificationTime,
     notificationHour: parseInt(timeParts[0], 10),
     notificationMinute: parseInt(timeParts[1], 10),
