@@ -4,9 +4,9 @@
   "description": "Standalone daily academic prep app — Spring 2026",
   "main": "src/index.js",
   "scripts": {
-    "web": "node src/index.js --web",
+    "start": "node src/index.js --web",
     "now": "node src/index.js --now",
-    "start": "node src/index.js",
+    "schedule": "node src/index.js",
     "test": "node src/index.js --now --dry-run"
   },
   "dependencies": {

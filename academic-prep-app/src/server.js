@@ -54,8 +54,8 @@ app.get('/api/briefing', (req, res) => {
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 
-function startServer(port = 3000) {
-  app.listen(port, () => {
+function startServer(port = process.env.PORT || 3000) {
+  app.listen(port, '0.0.0.0', () => {
     console.log(`\n🌐 Academic Prep App running at http://localhost:${port}`);
     console.log('   Open that URL in your browser to manage tasks.\n');
   });
